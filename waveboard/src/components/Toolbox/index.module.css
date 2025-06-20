@@ -1,0 +1,168 @@
+.container {
+  position: absolute;
+  top: 50%;
+  left: 20px; /* Changed from left: 5% to fixed left position */
+  transform: translateY(-50%); /* Changed from translate(-50%, -50%) to only center vertically */
+  padding: 16px;
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  border-radius: 8px;
+  backdrop-filter: blur(1px);
+  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
+  background-color: transparent;
+  border: 2px solid #e6e6e6;
+  cursor: move;
+  z-index: 1000;
+  width: 120px; /* Added fixed width for vertical layout */
+  max-height: 90vh; /* Prevent toolbox from exceeding viewport height */
+  overflow-y: auto; /* Add scrolling if content overflows */
+}
+
+.dragHandle {
+  background-color: rgb(99, 96, 96);
+  padding: 5px;
+  font-weight: 800;
+  color: rgb(115, 113, 113);
+  text-align: center;
+  cursor: move;
+  border-radius: 8px;
+  margin-bottom: 10px;
+}
+
+.selectOptionContainer {
+  margin-bottom: 24px;
+}
+
+.selectOptionContainer:last-child {
+  margin-bottom: 0;
+}
+
+.selectOptionContainer:first-child {
+  padding-top: 20px;
+}
+
+.toolBoxLabel {
+  display: block;
+  margin-bottom: 8px;
+  font-weight: 500;
+  color: rgb(99, 96, 96);
+}
+
+.colorsContainer {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: 8px; /* Added gap for better spacing */
+}
+
+.colorBox {
+  display: inline-block;
+  width: 24px; /* Slightly larger for better visibility */
+  height: 24px;
+  border-radius: 4px;
+  cursor: pointer;
+  transition: transform 0.2s ease; /* Added hover effect */
+}
+
+.colorBox:hover {
+  transform: scale(1.1);
+}
+
+.noFillColorBox {
+  background: linear-gradient(
+      to top left,
+      rgba(255, 0, 0, 0) 0%,
+      rgba(255, 0, 0, 0) calc(50% - 0.8px),
+      rgba(255, 0, 0, 1) 50%,
+      rgba(255, 0, 0, 0) calc(50% + 0.8px),
+      rgba(255, 0, 0, 0) 100%
+    ),
+    linear-gradient(
+      to top right,
+      rgba(255, 0, 0, 0) 0%,
+      rgba(255, 0, 0, 0) calc(50% - 0.8px),
+      rgba(255, 0, 0, 1) 50%,
+      rgba(255, 0, 0, 0) calc(50% + 0.8px),
+      rgba(255, 0, 0, 0) 100%
+    );
+}
+
+.activeColorBox {
+  border: 2px solid #4a47b1;
+  box-shadow: 0 0 0 1px #4a47b1;
+}
+
+.colorPicker {
+  width: 40px;
+  height: 40px;
+  border-radius: 8px;
+  border: 2px solid #ccc;
+  cursor: pointer;
+}
+
+/* Range slider styling for vertical layout */
+input[type="range"] {
+  width: 100%;
+  margin: 8px 0;
+  -webkit-appearance: none;
+  appearance: none;
+  height: 6px;
+  border-radius: 3px;
+  background: #e0e0e0;
+  outline: none;
+}
+
+input[type="range"]::-webkit-slider-thumb {
+  -webkit-appearance: none;
+  appearance: none;
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #4a47b1;
+  cursor: pointer;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+input[type="range"]::-moz-range-thumb {
+  width: 18px;
+  height: 18px;
+  border-radius: 50%;
+  background: #4a47b1;
+  cursor: pointer;
+  border: none;
+  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+}
+
+/* Dark theme styles */
+.dark .container {
+  background-color: rgba(0, 0, 0, 0.1);
+  border-color: rgba(255, 255, 255, 0.2);
+}
+
+.dark .dragHandle {
+  background-color: rgba(165, 162, 162, 0.2);
+  color: white;
+}
+
+.dark .toolBoxLabel {
+  color: rgb(200, 200, 200);
+}
+
+.dark .colorPicker {
+  border: 2px solid rgb(67, 63, 63);
+}
+
+.dark .selectOptionContainer {
+  color: rgb(180, 180, 180);
+}
+
+.dark input[type="range"] {
+  background: #404040;
+}
+
+.dark input[type="range"]::-webkit-slider-thumb {
+  background: #6366f1;
+}
+
+.dark input[type="range"]::-moz-range-thumb {
+  background: #6366f1;
+}

@@ -1,0 +1,68 @@
+.container {
+    position: absolute;
+    left: 50%;
+    top: 10px;
+    padding: 8px 12px;
+    display: flex;
+    border-radius: 8px;
+    border: 1px solid #ccc;
+    transform: translateX(-50%);
+    box-shadow: 1px 0 10px rgba(0, 0, 0, 0.2);
+    z-index: 1000;
+    position: fixed;
+  }
+  
+  .toolItem {
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    font-size: 24px;
+    padding: 12px;
+    color: rgb(46, 45, 45);
+    margin-right: 20px;
+    cursor: pointer;
+  }
+  
+  .toolItem:last-child {
+    margin-right: 0;
+  }
+  
+  .toolItem:hover {
+    background-color: #bad7e0;
+    color: #4a4a4a;
+    border-radius: 8px;
+  }
+  
+  .toolItem.active {
+    background-color: #91acda;
+    color: #161515;
+    border-radius: 8px;
+  }
+  
+  .dark .toolItem {
+    color: white;
+  }
+  
+  .dark .toolItem:hover,
+  .dark .toolItem.active {
+    color: #191818;
+  }
+  
+  @media (max-width: 768px) {
+    .container {
+      flex-wrap: wrap;
+      left: 5%;
+      transform: translateX(0);
+    }
+  
+    .toolItem {
+      font-size: 18px;
+      padding: 8px;
+      margin-right: 10px;
+    }
+  
+    .toolItem:last-child {
+      margin-right: 0;
+    }
+  }
+  
