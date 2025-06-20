@@ -18,7 +18,7 @@ const RightSidebar = ({ canvas, navigate, connectedUsers = [], isConnected = fal
     setError("");
     setSuccess("");
   };
-  const BackendURL = process.env.REACT_APP_BACKEND_URL|| "http://localhost:5000"; 
+  const BackendURL = process.env.REACT_APP_BACKEND_URL; 
 
   const handleShareSubmit = async (e) => {
     e.preventDefault();

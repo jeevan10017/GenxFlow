@@ -2,7 +2,7 @@ import React, { useEffect, useState } from "react";
 import axios from "axios";
 import { Link, useNavigate } from "react-router-dom";
 
-  const BackendURL = process.env.REACT_APP_BACKEND_URL|| "http://localhost:5000";
+  const BackendURL = process.env.REACT_APP_BACKEND_URL;
 function Profile() {
   const [user, setUser] = useState(null);
   const [canvases, setCanvases] = useState([]);

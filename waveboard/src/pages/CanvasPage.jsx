@@ -24,7 +24,7 @@ function CanvasPage() {
       navigate('/login');
       return;
     }
-      const BackendURL = process.env.REACT_APP_BACKEND_URL|| "http://localhost:5000";
+      const BackendURL = process.env.REACT_APP_BACKEND_URL;
     // Socket.IO connection setup
     const connectSocket = () => {
       // Connect the socket
@@ -163,7 +163,7 @@ function CanvasPage() {
   }, [id]);
 
   // Save canvas to server periodically or on significant changes
-    const BackendURL = process.env.REACT_APP_BACKEND_URL|| "http://localhost:5000";  const saveCanvasToServer = useCallback(async (elements) => {
+    const BackendURL = process.env.REACT_APP_BACKEND_URL;  const saveCanvasToServer = useCallback(async (elements) => {
     try {
       await axios.put(
         `${BackendURL}/api/canvas/${id}`,

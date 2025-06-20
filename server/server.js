@@ -14,31 +14,75 @@ connectDB();
 const app = express();
 const server = http.createServer(app); 
 
-// Attach Socket.IO to the server
+// Improved CORS configuration for production
+const allowedOrigins = [
+  process.env.FRONTEND_URL,
+  'https://virtual-canvas.vercel.app',
+  'https://virtual-canvas.vercel.app/', // Handle trailing slash
+  'http://localhost:3000', // For local development
+  'http://localhost:3001'
+].filter(Boolean); // Remove undefined values
+
+// Attach Socket.IO to the server with optimized settings for Render
 const io = new Server(server, {
   cors: {
-    origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+    origin: (origin, callback) => {
+      // Allow requests with no origin (mobile apps, etc.)
+      if (!origin) return callback(null, true);
+      
+      // Remove trailing slash for comparison
+      const normalizedOrigin = origin.replace(/\/$/, '');
+      const normalizedAllowed = allowedOrigins.map(o => o.replace(/\/$/, ''));
+      
+      if (normalizedAllowed.includes(normalizedOrigin)) {
+        return callback(null, true);
+      }
+      
+      console.warn(`CORS blocked origin: ${origin}`);
+      callback(new Error('Not allowed by CORS'));
+    },
     methods: ['GET', 'POST'],
     credentials: true
   },
-  // Add connection configuration
-  pingTimeout: 60000,
-  pingInterval: 25000,
-  maxHttpBufferSize: 1e8 // 100MB for large canvas data
+  // Optimized settings for Render free tier
+  pingTimeout: 30000, // Reduced from 60000
+  pingInterval: 15000, // Reduced from 25000
+  maxHttpBufferSize: 5e6, // Reduced to 5MB from 100MB
+  transports: ['websocket', 'polling'], // Prefer websocket
+  upgradeTimeout: 30000, // 30 seconds to upgrade
+  allowEIO3: true, // Allow Engine.IO v3 clients
+  // Add compression for better performance on limited bandwidth
+  compression: true,
+  // Reduce memory usage
+  perMessageDeflate: {
+    threshold: 1024,
+    concurrencyLimit: 10,
+    serverMaxWindowBits: 13
+  }
 });
 
-// Store room information and user data
+// Store room information and user data with memory optimization
 const rooms = new Map();
-const userRooms = new Map(); // Track which room each user is in
+const userRooms = new Map();
+const MAX_ROOMS = 50; // Limit rooms to prevent memory issues
+const MAX_ELEMENTS_PER_CANVAS = 1000; // Limit canvas elements
 
-// Helper function to safely serialize canvas data
+// Enhanced helper function to safely serialize canvas data
 const sanitizeCanvasData = (data) => {
   if (!data) return data;
   
   try {
-    // If elements array exists, clean it
-    if (data.elements && Array.isArray(data.elements)) {
-      data.elements = data.elements.map(element => {
+    let cleanData = { ...data };
+    
+    // If elements array exists, clean and limit it
+    if (cleanData.elements && Array.isArray(cleanData.elements)) {
+      // Limit number of elements to prevent memory issues
+      if (cleanData.elements.length > MAX_ELEMENTS_PER_CANVAS) {
+        cleanData.elements = cleanData.elements.slice(-MAX_ELEMENTS_PER_CANVAS);
+        console.warn(`Canvas elements limited to ${MAX_ELEMENTS_PER_CANVAS} for memory optimization`);
+      }
+      
+      cleanData.elements = cleanData.elements.map(element => {
         const cleanElement = { ...element };
         
         // Remove non-serializable properties
@@ -54,30 +98,42 @@ const sanitizeCanvasData = (data) => {
           cleanElement.fill = 'transparent';
         }
         
+        // Remove unnecessary properties to reduce payload size
+        delete cleanElement.seed;
+        delete cleanElement.versionNonce;
+        
         return cleanElement;
       });
     }
     
-    return data;
+    return cleanData;
   } catch (error) {
     console.error('Error sanitizing canvas data:', error);
-    return { ...data, elements: [] }; // Return safe fallback
+    return { ...data, elements: [] };
   }
 };
 
-// Helper function to get room users
-const getRoomUsers = (roomId) => {
-  const room = rooms.get(roomId);
-  return room ? Array.from(room.users.values()) : [];
-};
-
-// Helper function to add user to room
+// Enhanced room management with memory limits
 const addUserToRoom = (roomId, socketId, userData = {}) => {
+  // Limit number of rooms to prevent memory issues on free tier
+  if (!rooms.has(roomId) && rooms.size >= MAX_ROOMS) {
+    // Remove oldest inactive room
+    const oldestRoom = Array.from(rooms.entries())
+      .filter(([_, room]) => room.users.size === 0)
+      .sort((a, b) => a[1].lastActivity - b[1].lastActivity)[0];
+    
+    if (oldestRoom) {
+      rooms.delete(oldestRoom[0]);
+      console.log(`Removed oldest inactive room: ${oldestRoom[0]}`);
+    }
+  }
+  
   if (!rooms.has(roomId)) {
     rooms.set(roomId, {
       users: new Map(),
       lastActivity: Date.now(),
-      lastCanvasUpdate: null // Track last canvas state
+      lastCanvasUpdate: null,
+      createdAt: Date.now()
     });
   }
   
@@ -92,15 +148,15 @@ const addUserToRoom = (roomId, socketId, userData = {}) => {
   userRooms.set(socketId, roomId);
 };
 
-// Helper function to remove user from room
 const removeUserFromRoom = (roomId, socketId) => {
   if (rooms.has(roomId)) {
     const room = rooms.get(roomId);
     room.users.delete(socketId);
     
-    // Clean up empty rooms
+    // Clean up empty rooms immediately to save memory
     if (room.users.size === 0) {
       rooms.delete(roomId);
+      console.log(`Cleaned up empty room: ${roomId}`);
     } else {
       room.lastActivity = Date.now();
     }
@@ -109,50 +165,59 @@ const removeUserFromRoom = (roomId, socketId) => {
   userRooms.delete(socketId);
 };
 
-io.on('connection', (socket) => {
-  console.log('A user connected:', socket.id);
+const getRoomUsers = (roomId) => {
+  const room = rooms.get(roomId);
+  return room ? Array.from(room.users.values()) : [];
+};
 
-  // Handle joining a canvas room
+// Connection handling with enhanced error management
+io.on('connection', (socket) => {
+  console.log('User connected:', socket.id);
+
+  // Handle connection timeout for Render's limitations
+  const connectionTimeout = setTimeout(() => {
+    if (socket.connected) {
+      socket.emit('serverMessage', { 
+        type: 'warning', 
+        message: 'Connection will be optimized for free tier limitations' 
+      });
+    }
+  }, 1000);
+
   socket.on('joinRoom', (roomId) => {
     try {
-      // Validate roomId
-      if (!roomId || typeof roomId !== 'string') {
+      clearTimeout(connectionTimeout);
+      
+      if (!roomId || typeof roomId !== 'string' || roomId.length > 50) {
         socket.emit('error', { message: 'Invalid room ID' });
         return;
       }
 
-      // Leave previous room if any
       const previousRoom = userRooms.get(socket.id);
       if (previousRoom && previousRoom !== roomId) {
         socket.leave(previousRoom);
         removeUserFromRoom(previousRoom, socket.id);
-        
-        // Notify previous room about user leaving
         socket.to(previousRoom).emit('userLeft', {
           userId: socket.id,
           timestamp: Date.now()
         });
       }
 
-      // Join new room
       socket.join(roomId);
       addUserToRoom(roomId, socket.id, {
-        userName: `User-${socket.id.slice(-6)}` // Generate a simple username
+        userName: `User-${socket.id.slice(-6)}`
       });
 
       console.log(`User ${socket.id} joined room ${roomId}`);
 
-      // Send current room users to the joining user
       const roomUsers = getRoomUsers(roomId);
       socket.emit('roomUsers', roomUsers);
 
-      // Send last canvas state if available
       const room = rooms.get(roomId);
       if (room && room.lastCanvasUpdate) {
         socket.emit('canvasUpdate', sanitizeCanvasData(room.lastCanvasUpdate));
       }
 
-      // Notify other users in the room about the new user
       socket.to(roomId).emit('userJoined', {
         userId: socket.id,
         userName: `User-${socket.id.slice(-6)}`,
@@ -165,7 +230,6 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Handle leaving a room
   socket.on('leaveRoom', (roomId) => {
     try {
       if (!roomId) return;
@@ -173,9 +237,6 @@ io.on('connection', (socket) => {
       socket.leave(roomId);
       removeUserFromRoom(roomId, socket.id);
 
-      console.log(`User ${socket.id} left room ${roomId}`);
-
-      // Notify other users in the room
       socket.to(roomId).emit('userLeft', {
         userId: socket.id,
         timestamp: Date.now()
@@ -186,9 +247,18 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Handle canvas updates
+  // Optimized canvas update handling with throttling
+  let lastCanvasUpdate = 0;
+  const CANVAS_UPDATE_THROTTLE = 50; // 50ms throttle
+
   socket.on('canvasUpdate', (data) => {
     try {
+      const now = Date.now();
+      if (now - lastCanvasUpdate < CANVAS_UPDATE_THROTTLE) {
+        return; // Throttle updates to reduce server load
+      }
+      lastCanvasUpdate = now;
+
       const { roomId, type, elements, timestamp, ...updateData } = data;
       
       if (!roomId) {
@@ -196,7 +266,6 @@ io.on('connection', (socket) => {
         return;
       }
 
-      // Sanitize the canvas data before broadcasting
       const sanitizedData = sanitizeCanvasData({
         type,
         elements,
@@ -205,51 +274,47 @@ io.on('connection', (socket) => {
         ...updateData
       });
 
-      // Update room activity and store last canvas state
       if (rooms.has(roomId)) {
         const room = rooms.get(roomId);
         room.lastActivity = Date.now();
         
-        // Store the last complete canvas state for new users
         if (elements && Array.isArray(elements) && elements.length > 0) {
           room.lastCanvasUpdate = sanitizedData;
         }
       }
 
-      // Broadcast to all others in the room (excluding sender)
       socket.to(roomId).emit('canvasUpdate', sanitizedData);
-
-      console.log(`Canvas update in room ${roomId}: ${type} (${elements ? elements.length : 0} elements)`);
 
     } catch (error) {
       console.error('Error handling canvas update:', error);
-      // Send error back to client
       socket.emit('error', { 
         message: 'Failed to process canvas update',
-        details: error.message 
+        details: process.env.NODE_ENV === 'development' ? error.message : 'Update failed'
       });
     }
   });
 
-  // Handle user cursor movements
+  // Throttled cursor updates
+  let lastCursorUpdate = 0;
+  const CURSOR_UPDATE_THROTTLE = 100; // 100ms throttle
+
   socket.on('userCursor', (data) => {
     try {
+      const now = Date.now();
+      if (now - lastCursorUpdate < CURSOR_UPDATE_THROTTLE) {
+        return;
+      }
+      lastCursorUpdate = now;
+
       const { roomId, x, y, action, timestamp } = data;
       
-      if (!roomId) {
-        console.error('No roomId provided for cursor update');
+      if (!roomId || typeof x !== 'number' || typeof y !== 'number') {
         return;
       }
 
-      // Validate cursor data
-      if (typeof x !== 'number' || typeof y !== 'number') {
-        return; // Ignore invalid cursor data
-      }
-
-      // Broadcast cursor position to others in the room
       socket.to(roomId).emit('userCursor', {
         userId: socket.id,
-        x: Math.round(x), // Round to reduce data size
+        x: Math.round(x),
         y: Math.round(y),
         action,
         timestamp: timestamp || Date.now()
@@ -260,16 +325,13 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Handle user disconnect
   socket.on('disconnect', (reason) => {
+    clearTimeout(connectionTimeout);
     console.log('User disconnected:', socket.id, 'Reason:', reason);
     
-    // Clean up user from any rooms
     const roomId = userRooms.get(socket.id);
     if (roomId) {
       removeUserFromRoom(roomId, socket.id);
-      
-      // Notify room about user leaving
       socket.to(roomId).emit('userLeft', {
         userId: socket.id,
         timestamp: Date.now()
@@ -277,97 +339,133 @@ io.on('connection', (socket) => {
     }
   });
 
-  // Handle connection errors
   socket.on('error', (error) => {
     console.error('Socket error for user', socket.id, ':', error);
   });
 
-  // Handle ping/pong for connection health
   socket.on('ping', () => {
     socket.emit('pong', { timestamp: Date.now() });
   });
-
-  // Handle client errors
-  socket.on('clientError', (error) => {
-    console.error('Client error reported by', socket.id, ':', error);
-  });
 });
 
-// Optional: Clean up inactive rooms periodically
+// More aggressive cleanup for free tier
 setInterval(() => {
   const now = Date.now();
-  const INACTIVE_TIMEOUT = 30 * 60 * 1000; // 30 minutes
+  const INACTIVE_TIMEOUT = 10 * 60 * 1000; // Reduced to 10 minutes
 
   for (const [roomId, room] of rooms.entries()) {
-    if (now - room.lastActivity > INACTIVE_TIMEOUT && room.users.size === 0) {
-      rooms.delete(roomId);
-      console.log(`Cleaned up inactive room: ${roomId}`);
+    if (now - room.lastActivity > INACTIVE_TIMEOUT) {
+      if (room.users.size === 0) {
+        rooms.delete(roomId);
+        console.log(`Cleaned up inactive room: ${roomId}`);
+      } else {
+        // Clear canvas data for inactive rooms to save memory
+        room.lastCanvasUpdate = null;
+      }
     }
   }
-}, 5 * 60 * 1000); // Run every 5 minutes
+  
+  // Force garbage collection if available (for debugging)
+  if (global.gc && rooms.size === 0) {
+    global.gc();
+  }
+}, 2 * 60 * 1000); // Run every 2 minutes
 
-// Middlewares
+// Enhanced CORS middleware
 app.use(cors({
-  origin: process.env.FRONTEND_URL || 'http://localhost:3000',
+  origin: (origin, callback) => {
+    if (!origin) return callback(null, true);
+    
+    const normalizedOrigin = origin.replace(/\/$/, '');
+    const normalizedAllowed = allowedOrigins.map(o => o.replace(/\/$/, ''));
+    
+    if (normalizedAllowed.includes(normalizedOrigin)) {
+      return callback(null, true);
+    }
+    
+    console.warn(`CORS blocked origin: ${origin}`);
+    callback(new Error('Not allowed by CORS'));
+  },
   credentials: true
 }));
 
-app.use(express.json({ limit: '10mb' }));
-app.use(express.urlencoded({ extended: true }));
+app.use(express.json({ limit: '5mb' })); // Reduced limit
+app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/api/canvas', canvasRoutes);
 
-// Health check
+// Enhanced health check with memory info
 app.get('/api/health', (req, res) => {
+  const memUsage = process.memoryUsage();
   res.status(200).json({ 
     message: 'Server is running', 
     timestamp: new Date(),
     activeRooms: rooms.size,
-    totalConnections: io.engine.clientsCount
+    totalConnections: io.engine.clientsCount,
+    memory: {
+      used: Math.round(memUsage.heapUsed / 1024 / 1024) + 'MB',
+      total: Math.round(memUsage.heapTotal / 1024 / 1024) + 'MB'
+    },
+    uptime: Math.round(process.uptime()) + 's'
   });
 });
 
-// Socket.IO status endpoint
 app.get('/api/socket-status', (req, res) => {
   const roomStats = Array.from(rooms.entries()).map(([roomId, room]) => ({
-    roomId,
+    roomId: roomId.length > 20 ? roomId.substring(0, 20) + '...' : roomId,
     userCount: room.users.size,
     lastActivity: new Date(room.lastActivity),
     hasCanvasData: !!room.lastCanvasUpdate,
-    users: Array.from(room.users.values()).map(user => ({
-      id: user.id,
-      joinTime: new Date(user.joinTime),
-      userName: user.userName
-    }))
+    age: Math.round((Date.now() - room.createdAt) / 1000) + 's'
   }));
 
   res.status(200).json({
     totalRooms: rooms.size,
     totalConnections: io.engine.clientsCount,
-    rooms: roomStats
+    rooms: roomStats,
+    serverStats: {
+      memory: process.memoryUsage(),
+      uptime: process.uptime()
+    }
   });
 });
 
-// Error handler
+// Enhanced error handling
 app.use((err, req, res, next) => {
-  console.error(err.stack);
+  console.error('Server error:', err.message);
   res.status(500).json({
-    message: 'Something went wrong!',
+    message: 'Server error occurred',
     error: process.env.NODE_ENV === 'development' ? err.message : 'Internal server error'
   });
 });
 
-// 404 handler
 app.use('*', (req, res) => {
-  res.status(404).json({ message: 'Route2 not found' });
+  res.status(404).json({ message: 'Route not found' });
 });
 
-// Start server
+// Graceful shutdown handling for Render
+process.on('SIGTERM', () => {
+  console.log('SIGTERM received, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
+
+process.on('SIGINT', () => {
+  console.log('SIGINT received, shutting down gracefully');
+  server.close(() => {
+    console.log('Server closed');
+    process.exit(0);
+  });
+});
+
 const PORT = process.env.PORT || 5000;
-server.listen(PORT, () => {
+server.listen(PORT, '0.0.0.0', () => {
   console.log(`Server running on port ${PORT}`);
   console.log(`Environment: ${process.env.NODE_ENV || 'development'}`);
-  console.log('Socket.IO server initialized for real-time collaboration');
+  console.log(`Allowed origins: ${allowedOrigins.join(', ')}`);
+  console.log('Socket.IO server optimized for Render free tier');
 });

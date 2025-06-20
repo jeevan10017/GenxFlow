@@ -16,7 +16,7 @@ function Register() {
   const navigate = useNavigate();
 
   
-      const BackendURL = process.env.REACT_APP_BACKEND_URL|| "http://localhost:5000";
+      const BackendURL = process.env.REACT_APP_BACKEND_URL;
   const handleRegister = async (e) => {
     e.preventDefault();
     setLoading(true);

@@ -22,7 +22,7 @@ function Login() {
     }
   }, [location]);
 
-    const BackendURL = process.env.REACT_APP_BACKEND_URL|| "http://localhost:5000";
+    const BackendURL = process.env.REACT_APP_BACKEND_URL;
   const handleLogin = async (e) => {
     e.preventDefault();
     setLoading(true);
