@@ -1,16 +1,15 @@
 const mongoose = require('mongoose');
+require('dotenv').config();
 
-// const string ='mongodb+srv://jeevankumarkorra2005:jeevs123@clusternew.wxjdymn.mongodb.net/?retryWrites=true&w=majority&appName=ClusterNew'
-const string =  'mongodb://localhost:27017/mydatabase'; // Use environment variable or fallback to local MongoDB
 
 const connectionparams = {
-    useNewUrlParser: true, // these are the parameters to avoid warnings
-    useUnifiedTopology: true // these are the parameters to avoid warnings
+    useNewUrlParser: true, 
+    useUnifiedTopology: true 
 }
 
 const connectDB = async () => {
     try{
-        await mongoose.connect(string, connectionparams);
+        await mongoose.connect(process.env.MONGO_URI, connectionparams);
         console.log("MongoDB is connected");
     }
     catch(err){
