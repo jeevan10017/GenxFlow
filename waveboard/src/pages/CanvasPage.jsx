@@ -196,7 +196,7 @@ function CanvasPage() {
     return (
       <div className="flex justify-center items-center h-screen bg-gray-100">
         <div className="text-center">
-          <div className="animate-spin rounded-full h-12 w-12 border-t-2 border-b-2 border-indigo-500 mx-auto mb-4"></div>
+         <div className="relative"> <svg className="w-8 h-8 animate-bounce" viewBox="0 0 24 24" fill="none"> <path d="M12 19l7-7 3 3-7 7-3-3z" fill="currentColor" className="text-yellow-400"/> <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" fill="currentColor" className="text-gray-600"/> </svg> <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2"> <div className="w-2 h-2 bg-blue-500 rounded-full animate-ping"></div> </div> </div>
           <p className="text-gray-600">Loading canvas...</p>
         </div>
       </div>
