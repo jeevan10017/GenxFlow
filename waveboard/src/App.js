@@ -1,37 +1,54 @@
-import './App.css';
-import { BrowserRouter as Router, Routes, Route } from 'react-router-dom';
-import Profile from './pages/Profile';
-import CanvasPage from './pages/CanvasPage';
-import Login from './pages/Login';
-import Register from './pages/Register';
-import ProtectedRoute from './components/ProtectedRoute'; 
+import { BrowserRouter as Router, Routes, Route, Navigate } from "react-router-dom";
+import { AppProvider, useApi } from "./context/AppContext";
+import Profile from "./pages/Profile";
+import CanvasPage from "./pages/CanvasPage";
+import Login from "./pages/Login";
+import Register from "./pages/Register";
+import GuestDashboard from "./pages/GuestDashboard"; 
+import ProtectedRoute from "./components/ProtectedRoute";
+
+function AppContent() {
+  const { isAuthenticated } = useApi();
+
+  return (
+    <Routes>
+      <Route
+        path="/"
+        element={
+          isAuthenticated ? (
+            <ProtectedRoute>
+              <Profile />
+            </ProtectedRoute>
+          ) : (
+            <GuestDashboard />
+          )
+        }
+      />
+      <Route
+        path="/canvas/:id"
+        element={
+          <ProtectedRoute>
+            <CanvasPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route path="/login" element={<Login />} />
+      <Route path="/register" element={<Register />} />
+
+      <Route
+        path="/guest"
+        element={isAuthenticated ? <Navigate to="/" /> : <GuestDashboard />}
+      />
+    </Routes>
+  );
+}
 
 function App() {
   return (
     <Router>
-      <Routes>
-        {/* Protected Routes */}
-        <Route
-          path="/"
-          element={
-            <ProtectedRoute>
-              <Profile />
-            </ProtectedRoute>
-          }
-        />
-        <Route
-          path="/canvas/:id"
-          element={
-            <ProtectedRoute>
-              <CanvasPage />
-            </ProtectedRoute>
-          }
-        />
-
-        {/* Public Routes */}
-        <Route path="/login" element={<Login />} />
-        <Route path="/register" element={<Register />} />
-      </Routes>
+      <AppProvider>
+        <AppContent />
+      </AppProvider>
     </Router>
   );
 }

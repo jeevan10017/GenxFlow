@@ -1,4 +1,5 @@
 const User = require('../models/userModal');
+const Canvas = require("../models/canvasModel");
 const bcrypt = require('bcrypt');
 const jwt = require('jsonwebtoken'); 
 const validator = require('validator'); 
@@ -63,6 +64,63 @@ const loginUser = async (req, res) => {
     }
 };
 
+const googleLogin = async (req, res) => {
+  const { name, email, googleId, localCanvasData } = req.body;
+
+  try {
+    let user = await User.findOne({ email });
+
+    if (!user) {
+      user = new User({
+        name,
+        email,
+        googleId,
+        password: await bcrypt.hash(googleId + name, 10), 
+      });
+      await user.save();
+    }
+
+    const token = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, {
+      expiresIn: "1h",
+    });
+
+    // Migrate local canvas data if it exists
+    if (localCanvasData && localCanvasData.elements) {
+      await Canvas.create({
+        name: localCanvasData.name || "My First Canvas",
+        elements: localCanvasData.elements,
+        user_email: user.email,
+        owner: user._id,
+      });
+    }
+
+    res.status(200).json({ token, message: "Login successful." });
+  } catch (error) {
+    res.status(500).json({ message: "Server error during Google login." });
+  }
+};
+
+const migrateCanvas = async (req, res) => {
+  const { localCanvasData } = req.body;
+  const { email } = req.user;
+
+  if (!localCanvasData || !localCanvasData.elements) {
+    return res.status(400).json({ message: "No canvas data provided." });
+  }
+
+  try {
+    const newCanvas = await Canvas.create({
+      name: localCanvasData.name || "My Saved Canvas",
+      elements: localCanvasData.elements,
+      user_email: email,
+      owner: req.user._id,
+    });
+    res.status(201).json(newCanvas);
+  } catch (error) {
+    res.status(500).json({ message: "Failed to migrate canvas." });
+  }
+};
+
 const UserProfile = async (req, res) => {
     try {
         const user = await User.findById(req.user.id); 
@@ -75,4 +133,4 @@ const UserProfile = async (req, res) => {
     }
 };
 
-module.exports = { registerUser, loginUser, UserProfile };
+module.exports = { registerUser, loginUser, UserProfile, googleLogin, migrateCanvas };

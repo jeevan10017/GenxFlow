@@ -1,12 +1,17 @@
-
 import React from 'react';
 import { Navigate } from 'react-router-dom';
+import { useApi } from '../context/AppContext';
 
 const ProtectedRoute = ({ children }) => {
-  const token = localStorage.getItem('token');
+  const { isAuthenticated, loading } = useApi();
 
-  if (!token) {
-    return <Navigate to="/login" replace />;
+  if (loading) {
+    // Optional: show a loading spinner while checking auth
+    return <div>Loading...</div>; 
+  }
+
+  if (!isAuthenticated) {
+    return <Navigate to="/login" />;
   }
 
   return children;

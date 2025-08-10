@@ -1,5 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
+import { useApi } from '../context/AppContext';
 import axios from 'axios';
 import Board from '../components/Board';
 import Toolbar from '../components/Toolbar';
@@ -8,10 +9,12 @@ import BoardProvider from '../store/BoardProvider';
 import ToolboxProvider from '../store/toolboxProvider';
 import socket from '../utils/socket';
 import RightSidebar from '../components/RightSidebar';
+import { Palette, AlertTriangle, Frown } from "lucide-react";
 
 function CanvasPage() {
   const { id } = useParams();
   const navigate = useNavigate();
+  const { canvasService } = useApi();
   const [canvas, setCanvas] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -24,36 +27,28 @@ function CanvasPage() {
       navigate('/login');
       return;
     }
-      const BackendURL = process.env.REACT_APP_BACKEND_URL;
-    // Socket.IO connection setup
     const connectSocket = () => {
       // Connect the socket
       socket.connect();
 
       // Socket event listeners
-      socket.on('connect', () => {
+     socket.on('connect', () => {
         console.log('Connected to server:', socket.id);
         setIsConnected(true);
-        
-        // Join the canvas room for real-time collaboration
         socket.emit('joinRoom', id);
       });
 
-      socket.on('disconnect', () => {
+       socket.on('disconnect', () => {
         console.log('Disconnected from server');
         setIsConnected(false);
         setConnectedUsers([]);
       });
-
-      socket.on('connect_error', (error) => {
-        console.error('Socket connection error:', error);
+      socket.on('connect_error', (err) => {
+        console.error('Socket connection error:', err);
         setIsConnected(false);
       });
       // Listen for canvas updates from other users
       socket.on('canvasUpdate', (data) => {
-        console.log('Received canvas update:', data);
-        
-        // Handle the canvas update using the BoardProvider's handler
         if (window.boardProviderHandlers && window.boardProviderHandlers[id]) {
           window.boardProviderHandlers[id].handleRemoteUpdate(data);
         }
@@ -90,22 +85,15 @@ function CanvasPage() {
     };
 
     const loadCanvas = async () => {
-      try {
+       try {
         setLoading(true);
-        const res = await axios.get(
-          `${BackendURL}/api/canvas/${id}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
+        const res = await canvasService.loadCanvas(id);
         setCanvas(res.data);
-        
-        // Connect socket after canvas is loaded
-        connectSocket();
+        connectSocket(); 
       } catch (err) {
         setError(err.response?.data?.message || 'Failed to load canvas');
         if (err.response?.status === 401) {
-          navigate('/login');
+          navigate('/login'); 
         }
       } finally {
         setLoading(false);
@@ -116,12 +104,10 @@ function CanvasPage() {
 
     // Cleanup function
     return () => {
-      // Leave the room and disconnect socket when component unmounts
       if (socket.connected) {
         socket.emit('leaveRoom', id);
         socket.disconnect();
       }
-      
       socket.off('connect');
       socket.off('disconnect');
       socket.off('connect_error');
@@ -130,13 +116,11 @@ function CanvasPage() {
       socket.off('userJoined');
       socket.off('userLeft');
       socket.off('roomUsers');
-
-      // Clean up global handlers
       if (window.boardProviderHandlers) {
         delete window.boardProviderHandlers[id];
       }
     };
-  }, [id, token, navigate]);
+  },[id, navigate, canvasService]);
 
   // Function to emit canvas updates to other users
   const handleCanvasUpdate = useCallback((updateData) => {
@@ -162,28 +146,21 @@ function CanvasPage() {
     }
   }, [id]);
 
-  // Save canvas to server periodically or on significant changes
-    const BackendURL = process.env.REACT_APP_BACKEND_URL;  const saveCanvasToServer = useCallback(async (elements) => {
+  
+    const saveCanvasToServer = useCallback(async (elements) => {
     try {
-      await axios.put(
-        `${BackendURL}/api/canvas/${id}`,
-        { elements },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
-      );
+      await canvasService.updateCanvas(id, elements);
       console.log('Canvas saved to server');
     } catch (error) {
       console.error('Failed to save canvas:', error);
     }
-  }, [id, token]);
+  }, [id, canvasService]);
 
   // Auto-save every 10 seconds if there are changes
   useEffect(() => {
     if (!canvas || !isConnected) return;
 
     const autoSaveInterval = setInterval(() => {
-      // Get current elements from BoardProvider
       if (window.boardProviderHandlers && window.boardProviderHandlers[id]) {
 
       }
@@ -192,31 +169,30 @@ function CanvasPage() {
     return () => clearInterval(autoSaveInterval);
   }, [canvas, isConnected, saveCanvasToServer, id]);
 
-  if (loading) {
+   if (loading) {
     return (
-      <div className="flex justify-center items-center h-screen bg-gray-100">
-        <div className="text-center">
-         <div className="relative"> <svg className="w-8 h-8 animate-bounce" viewBox="0 0 24 24" fill="none"> <path d="M12 19l7-7 3 3-7 7-3-3z" fill="currentColor" className="text-yellow-400"/> <path d="M18 13l-1.5-7.5L2 2l3.5 14.5L13 18l5-5z" fill="currentColor" className="text-gray-600"/> </svg> <div className="absolute -bottom-2 left-1/2 transform -translate-x-1/2"> <div className="w-2 h-2 bg-blue-500 rounded-full animate-ping"></div> </div> </div>
-          <p className="text-gray-600">Loading canvas...</p>
-        </div>
+      <div className="flex flex-col justify-center items-center h-screen bg-stone-100 text-stone-500">
+        <Palette className="w-12 h-12 animate-spin mb-4" />
+        <p className="font-semibold">Loading Canvas...</p>
       </div>
     );
   }
 
   if (error) {
     return (
-      <div className="flex justify-center items-center h-screen bg-gray-100">
-        <div className="text-center">
-          <div className="bg-red-50 border border-red-200 rounded-lg p-6 max-w-md">
-            <h2 className="text-lg font-semibold text-red-800 mb-2">Error Loading Canvas</h2>
-            <p className="text-red-600 mb-4">{error}</p>
-            <button
-              onClick={() => navigate('/')}
-              className="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
-            >
-              Back to Profile
-            </button>
-          </div>
+      <div className="flex justify-center items-center h-screen bg-stone-100 p-6">
+        <div className="text-center bg-white p-10 rounded-xl shadow-lg border border-stone-200">
+          <AlertTriangle className="mx-auto h-12 w-12 text-red-500 mb-4" />
+          <h2 className="font-serif text-2xl font-bold text-stone-800 mb-2">
+            Error Loading Canvas
+          </h2>
+          <p className="text-stone-600 mb-6">{error}</p>
+          <button
+            onClick={() => navigate("/")}
+            className="px-6 py-2 bg-stone-800 text-white font-bold rounded-lg hover:bg-stone-900 transition"
+          >
+            Back to Gallery
+          </button>
         </div>
       </div>
     );
@@ -224,14 +200,20 @@ function CanvasPage() {
 
   if (!canvas) {
     return (
-      <div className="flex justify-center items-center h-screen bg-gray-100">
-        <div className="text-center">
-          <p className="text-gray-600">Canvas not found</p>
+      <div className="flex justify-center items-center h-screen bg-stone-100 p-6">
+        <div className="text-center bg-white p-10 rounded-xl shadow-lg border border-stone-200">
+          <Frown className="mx-auto h-12 w-12 text-stone-500 mb-4" />
+          <h2 className="font-serif text-2xl font-bold text-stone-800 mb-2">
+            Canvas Not Found
+          </h2>
+          <p className="text-stone-600 mb-6">
+            We couldn't find the canvas you're looking for.
+          </p>
           <button
-            onClick={() => navigate('/')}
-            className="mt-4 px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition"
+            onClick={() => navigate("/")}
+            className="px-6 py-2 bg-stone-800 text-white font-bold rounded-lg hover:bg-stone-900 transition"
           >
-            Back to Profile
+            Back to Gallery
           </button>
         </div>
       </div>
@@ -239,33 +221,33 @@ function CanvasPage() {
   }
 
   return (
-    <div className="h-screen bg-gray-100 relative">
-      {/* Connection Status and User Count */}
-      <div className="absolute top-4 left-4 z-50 flex flex-col space-y-2">
+    <div className="h-screen bg-stone-100 relative font-sans">
+      {/* Top Left Info Panel */}
+      <div className="absolute top-4 left-4 z-20 flex flex-col items-start gap-2">
         {/* Connection Status */}
-        <div className={`flex items-center space-x-2 px-3 py-1 rounded-full text-xs ${
-          isConnected 
-            ? 'bg-green-100 text-green-800 border border-green-200' 
-            : 'bg-red-100 text-red-800 border border-red-200'
-        }`}>
-          <div className={`w-2 h-2 rounded-full ${
-            isConnected ? 'bg-green-500' : 'bg-red-500'
-          }`}></div>
-          <span>{isConnected ? 'Connected' : 'Disconnected'}</span>
+        <div className="flex items-center gap-2 px-3 py-1 bg-white/80 backdrop-blur-sm border border-stone-200 rounded-full text-xs font-semibold text-stone-700 shadow-sm">
+          <div
+            className={`w-2 h-2 rounded-full ${
+              isConnected ? "bg-green-500" : "bg-red-500"
+            }`}
+          ></div>
+          <span>{isConnected ? "Connected" : "Disconnected"}</span>
         </div>
 
-        {/* Connected Users Count */}
+        {/* User Count */}
         {isConnected && connectedUsers.length > 0 && (
-          <div className="bg-blue-100 text-blue-800 border border-blue-200 px-3 py-1 rounded-full text-xs">
-            <span>{connectedUsers.length} user{connectedUsers.length !== 1 ? 's' : ''} online</span>
+          <div className="flex items-center gap-2 px-3 py-1 bg-white/80 backdrop-blur-sm border border-stone-200 rounded-full text-xs font-semibold text-stone-700 shadow-sm">
+            <span>
+              {connectedUsers.length} user{connectedUsers.length > 1 ? "s" : ""} online
+            </span>
           </div>
         )}
       </div>
 
-      {/* Canvas Area */}
+      {/* Canvas Workspace */}
       <div className="h-full">
-        <BoardProvider 
-          canvasId={id} 
+        <BoardProvider
+          canvasId={id}
           initialElements={canvas.elements}
           onCanvasUpdate={handleCanvasUpdate}
           onCursorMove={handleCursorMove}
@@ -278,15 +260,16 @@ function CanvasPage() {
         </BoardProvider>
       </div>
 
-      {/* Right Sidebar - Positioned absolutely */}
-      <RightSidebar 
-        canvas={canvas} 
-        navigate={navigate} 
+      {/* Right Sidebar */}
+      <RightSidebar
+        canvas={canvas}
+        navigate={navigate}
         connectedUsers={connectedUsers}
         isConnected={isConnected}
       />
     </div>
   );
 }
+
 
 export default CanvasPage;
