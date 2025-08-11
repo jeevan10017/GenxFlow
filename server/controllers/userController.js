@@ -81,7 +81,7 @@ const googleLogin = async (req, res) => {
     }
 
     const token = jwt.sign({ id: user._id, email: user.email }, JWT_SECRET, {
-      expiresIn: "1h",
+      expiresIn: "24h",
     });
 
     // Migrate local canvas data if it exists

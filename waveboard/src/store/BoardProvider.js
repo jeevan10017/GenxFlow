@@ -1,4 +1,4 @@
-import React, { useCallback, useReducer, useEffect } from "react";
+import React, { useCallback, useReducer, useEffect, useContext } from "react";
 import boardContext from "./board-context";
 import { BOARD_ACTIONS, TOOL_ACTION_TYPES, TOOL_ITEMS } from "../constants";
 import {
@@ -7,6 +7,8 @@ import {
   isPointNearElement,
 } from "../utils/element";
 import getStroke from "perfect-freehand";
+import { recognizeShape } from "../utils/recognizer";
+import toolboxContext from "./toolbox-context"; 
 
 const boardReducer = (state, action) => {
   switch (action.type) {
@@ -40,6 +42,18 @@ const boardReducer = (state, action) => {
           x: state.viewport.x + action.payload.deltaX,
           y: state.viewport.y + action.payload.deltaY,
         },
+      };
+    }
+     case BOARD_ACTIONS.REPLACE_LAST_ELEMENT: {
+      const { newElement } = action.payload;
+      const elementsCopy = [...state.elements.slice(0, -1), newElement]; 
+      const newHistory = state.history.slice(0, state.index + 1);
+      newHistory.push(elementsCopy);
+      return {
+        ...state,
+        elements: elementsCopy,
+        history: newHistory,
+        index: state.index + 1,
       };
     }
     case BOARD_ACTIONS.ZOOM_VIEWPORT: {
@@ -92,13 +106,17 @@ const boardReducer = (state, action) => {
       const canvasX = (clientX - state.viewport.x) / state.viewport.scale;
       const canvasY = (clientY - state.viewport.y) / state.viewport.scale;
       
+      // If AI_BRUSH is active, we still create a standard BRUSH element for drawing.
+      const elementType = state.activeToolItem === TOOL_ITEMS.AI_BRUSH 
+        ? TOOL_ITEMS.BRUSH 
+        : state.activeToolItem;
       const newElement = createElement(
         state.elements.length,
         canvasX,
         canvasY,
         canvasX,
         canvasY,
-        { type: state.activeToolItem, stroke, fill, size }
+        {type: elementType, stroke, fill, size }
       );
       const prevElements = state.elements;
       return {
@@ -112,7 +130,6 @@ const boardReducer = (state, action) => {
     }
     case BOARD_ACTIONS.DRAW_MOVE: {
       const { clientX, clientY } = action.payload;
-      // Convert screen coordinates to canvas coordinates
       const canvasX = (clientX - state.viewport.x) / state.viewport.scale;
       const canvasY = (clientY - state.viewport.y) / state.viewport.scale;
       
@@ -125,13 +142,13 @@ const boardReducer = (state, action) => {
         case TOOL_ITEMS.CIRCLE:
         case TOOL_ITEMS.ARROW:
           const { x1, y1, stroke, fill, size } = newElements[index];
-          const newElement = createElement(index, x1, y1, canvasX, canvasY, {
-            type: state.activeToolItem,
+          const updatedElement = createElement(index, x1, y1, canvasX, canvasY, {
+            type: type, 
             stroke,
             fill,
             size,
           });
-          newElements[index] = newElement;
+          newElements[index] = updatedElement;
           return {
             ...state,
             elements: newElements,
@@ -141,15 +158,16 @@ const boardReducer = (state, action) => {
             ...newElements[index].points,
             { x: canvasX, y: canvasY },
           ];
+          const strokeOptions = { size: newElements[index].size || 2 };
           newElements[index].path = new Path2D(
-            getSvgPathFromStroke(getStroke(newElements[index].points))
+            getSvgPathFromStroke(getStroke(newElements[index].points, strokeOptions))
           );
           return {
             ...state,
             elements: newElements,
           };
         default:
-          throw new Error("Type not recognized");
+           throw new Error("Type not recognized during DRAW_MOVE");
       }
     }
     case BOARD_ACTIONS.DRAW_UP: {
@@ -220,6 +238,15 @@ const boardReducer = (state, action) => {
         index: 0,
       };
     }
+
+    case BOARD_ACTIONS.CLEAR_CANVAS: {
+  return {
+    ...state,
+    elements: [],
+    // history: [[]], 
+    index: 0,
+  };
+}
 
     case BOARD_ACTIONS.REMOTE_UPDATE: {
       if (state.toolActionType === TOOL_ACTION_TYPES.DRAWING || 
@@ -320,7 +347,7 @@ const BoardProvider = ({
     boardReducer,
     getInitialState()
   );
-
+const { toolboxState } = useContext(toolboxContext);
   // Handle initial elements loading
   useEffect(() => {
     if (initialElements && initialElements.length > 0) {
@@ -535,17 +562,62 @@ const BoardProvider = ({
     }
   };
 
-  const boardMouseUpHandler = () => {
+  const clearCanvasHandler = useCallback(() => {
+    dispatchBoardAction({ type: BOARD_ACTIONS.CLEAR_CANVAS });
+    setTimeout(() => emitCanvasUpdate('clearCanvas'), 0); // Notify others
+  }, [emitCanvasUpdate]);
+
+
+const boardMouseUpHandler = () => {
     if (boardState.toolActionType === TOOL_ACTION_TYPES.WRITING) return;
     
-    if (boardState.toolActionType === TOOL_ACTION_TYPES.DRAWING) {
-      dispatchBoardAction({
-        type: BOARD_ACTIONS.DRAW_UP,
-      });
-      setTimeout(() => {
-        emitCanvasUpdate('drawComplete');
-      }, 0);
+    // AI Brush Recognition Logic
+    if (boardState.activeToolItem === TOOL_ITEMS.AI_BRUSH && boardState.elements.length > 0) {
+      const lastElement = boardState.elements[boardState.elements.length - 1];
+      if (lastElement.type === TOOL_ITEMS.BRUSH && lastElement.points.length > 5) {
+        
+        const recognized = recognizeShape(lastElement.points);
+
+        if (recognized) {
+          const { shape, box } = recognized;
+          const { stroke } = lastElement;
+          const fill = toolboxState[shape]?.fill; 
+          const size = toolboxState[shape]?.size || 2;
+          
+          const newElement = createElement(
+            lastElement.id,
+            box.minX,
+            box.minY,
+            box.maxX,
+            box.maxY,
+            { type: shape, stroke, fill, size }
+          );
+
+          dispatchBoardAction({
+            type: BOARD_ACTIONS.REPLACE_LAST_ELEMENT,
+            payload: { newElement },
+          });
+
+          setTimeout(() => emitCanvasUpdate('drawComplete'), 0);
+          
+          dispatchBoardAction({
+            type: BOARD_ACTIONS.CHANGE_ACTION_TYPE,
+            payload: { actionType: TOOL_ACTION_TYPES.NONE },
+          });
+          return; 
+        }
+      }
     }
+    if (boardState.toolActionType === TOOL_ACTION_TYPES.DRAWING) {
+          dispatchBoardAction({
+            type: BOARD_ACTIONS.DRAW_UP,
+          });
+          setTimeout(() => {
+            emitCanvasUpdate('drawComplete');
+          }, 0);
+        }
+    
+   
     
     if (boardState.toolActionType === TOOL_ACTION_TYPES.PANNING) {
       dispatchBoardAction({
@@ -705,6 +777,7 @@ const BoardProvider = ({
     textAreaBlurHandler,
     undo: boardUndoHandler,
     redo: boardRedoHandler,
+    clearCanvas: clearCanvasHandler,
     handleRemoteUpdate,
     panViewport,
     zoomViewport,

@@ -1,7 +1,6 @@
 import React, { useEffect, useState, useCallback } from 'react';
 import { useParams, useNavigate } from 'react-router-dom';
 import { useApi } from '../context/AppContext';
-import axios from 'axios';
 import Board from '../components/Board';
 import Toolbar from '../components/Toolbar';
 import Toolbox from '../components/Toolbox';
@@ -10,6 +9,7 @@ import ToolboxProvider from '../store/toolboxProvider';
 import socket from '../utils/socket';
 import RightSidebar from '../components/RightSidebar';
 import { Palette, AlertTriangle, Frown } from "lucide-react";
+import './CanvasPage.css'; 
 
 function CanvasPage() {
   const { id } = useParams();
@@ -21,6 +21,9 @@ function CanvasPage() {
   const [isConnected, setIsConnected] = useState(false);
   const [connectedUsers, setConnectedUsers] = useState([]);
   const token = localStorage.getItem('token');
+  const [isDarkMode, setIsDarkMode] = useState(false);
+
+  const toggleDarkMode = () => setIsDarkMode(prevMode => !prevMode);
 
   useEffect(() => {
     if (!token) {
@@ -221,7 +224,7 @@ function CanvasPage() {
   }
 
   return (
-    <div className="h-screen bg-stone-100 relative font-sans">
+    <div className={`h-screen bg-stone-100 relative font-sans ${isDarkMode ? 'dark' : ''}`}>
       {/* Top Left Info Panel */}
       <div className="absolute top-4 left-4 z-20 flex flex-col items-start gap-2">
         {/* Connection Status */}
@@ -252,9 +255,9 @@ function CanvasPage() {
           onCanvasUpdate={handleCanvasUpdate}
           onCursorMove={handleCursorMove}
         >
-          <ToolboxProvider>
-            <Toolbar />
-            <Board />
+          <ToolboxProvider isDarkMode={isDarkMode}>
+            <Toolbar isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />
+            <Board isDarkMode={isDarkMode} />
             <Toolbox />
           </ToolboxProvider>
         </BoardProvider>

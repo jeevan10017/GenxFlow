@@ -25,19 +25,25 @@ export const createElement = (
     stroke,
     size,
   };
+
   let options = {
-    seed: id + 1, // id can't be zero
+    seed: id + 1,
     fillStyle: "solid",
+    stroke: stroke,
+    fill: fill,
+    strokeWidth: size,
   };
-  if (stroke) {
-    options.stroke = stroke;
-  }
-  if (fill) {
-    options.fill = fill;
-  }
-  if (size) {
-    options.strokeWidth = size;
-  }
+
+  // --- FIX: Normalize coordinates to handle all drawing directions ---
+  const minX = Math.min(x1, x2);
+  const minY = Math.min(y1, y2);
+  const maxX = Math.max(x1, x2);
+  const maxY = Math.max(y1, y2);
+
+  const width = maxX - minX;
+  const height = maxY - minY;
+
+
   switch (type) {
     case TOOL_ITEMS.BRUSH: {
       const brushElement = {
@@ -46,38 +52,46 @@ export const createElement = (
         path: new Path2D(getSvgPathFromStroke(getStroke([{ x: x1, y: y1 }]))),
         type,
         stroke,
+        size,
       };
       return brushElement;
     }
     case TOOL_ITEMS.LINE:
+      // Line is point-to-point, does not need normalization here.
       element.roughEle = gen.line(x1, y1, x2, y2, options);
       return element;
     case TOOL_ITEMS.RECTANGLE:
-      element.roughEle = gen.rectangle(x1, y1, x2 - x1, y2 - y1, options);
+      // Use normalized coordinates and positive width/height.
+      element.roughEle = gen.rectangle(minX, minY, width, height, options);
       return element;
     case TOOL_ITEMS.CIRCLE:
-      const cx = (x1 + x2) / 2,
-        cy = (y1 + y2) / 2;
-      const width = x2 - x1,
-        height = y2 - y1;
-      element.roughEle = gen.ellipse(cx, cy, width, height, options);
+       // Use normalized values for center and dimensions.
+      element.roughEle = gen.ellipse(minX + width / 2, minY + height / 2, width, height, options);
       return element;
     case TOOL_ITEMS.ARROW:
-      const { x3, y3, x4, y4 } = getArrowHeadsCoordinates(
-        x1,
-        y1,
-        x2,
-        y2,
-        ARROW_LENGTH
-      );
-      const points = [
-        [x1, y1],
-        [x2, y2],
-        [x3, y3],
-        [x2, y2],
-        [x4, y4],
-      ];
+       // Arrow is point-to-point, does not need normalization here.
+      const { x3, y3, x4, y4 } = getArrowHeadsCoordinates(x1, y1, x2, y2, ARROW_LENGTH);
+      const points = [ [x1, y1], [x2, y2], [x3, y3], [x2, y2], [x4, y4] ];
       element.roughEle = gen.linearPath(points, options);
+      return element;
+    case TOOL_ITEMS.TRIANGLE:
+      // Use normalized coordinates for polygon points.
+      const trianglePoints = [
+        [minX + width / 2, minY], // Top point
+        [minX, maxY],             // Bottom-left
+        [maxX, maxY],             // Bottom-right
+      ];
+      element.roughEle = gen.polygon(trianglePoints, options);
+      return element;
+    case TOOL_ITEMS.DIAMOND:
+       // Use normalized coordinates for polygon points.
+      const diamondPoints = [
+        [minX + width / 2, minY],        // Top
+        [maxX, minY + height / 2],       // Right
+        [minX + width / 2, maxY],        // Bottom
+        [minX, minY + height / 2],       // Left
+      ];
+      element.roughEle = gen.polygon(diamondPoints, options);
       return element;
     case TOOL_ITEMS.TEXT:
       element.text = "";

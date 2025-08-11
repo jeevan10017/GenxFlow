@@ -13,17 +13,21 @@ import {
   FaFont,
   FaDownload,
   FaAdjust,
+  FaMagic,
+  FaTrash,
 } from "react-icons/fa";
 import { CgProfile } from "react-icons/cg";
 import { LuRectangleHorizontal } from "react-icons/lu";
 import { TOOL_ITEMS } from "../../constants";
 import boardContext from "../../store/board-context";
 import { useNavigate } from "react-router-dom";
+import AiBrush from "../AiBrush";
 
-const Toolbar = () => {
-  const { activeToolItem, changeToolHandler, undo, redo } =
+const Toolbar = ({ isDarkMode, toggleDarkMode }) => {
+  
+  const { activeToolItem, changeToolHandler, undo, redo, clearCanvas } =
     useContext(boardContext);
-  const [isDarkMode, setIsDarkMode] = useState(false);
+  const [showAiBrushModal, setShowAiBrushModal] = useState(false);
   const navigate = useNavigate();
 
   const handleDownloadClick = () => {
@@ -35,15 +39,7 @@ const Toolbar = () => {
     anchor.click();
   };
 
-  const toggleBackground = () => {
-    const canvas = document.getElementById("canvas");
-    if (isDarkMode) {
-      canvas.style.backgroundColor = "white";
-    } else {
-      canvas.style.backgroundColor = "black";
-    }
-    setIsDarkMode(!isDarkMode);
-  };
+
 
   return (
     <>
@@ -56,6 +52,14 @@ const Toolbar = () => {
       >
         <FaPaintBrush />
       </div>
+      <div
+          className={cx(classes.toolItem, {
+            [classes.active]: activeToolItem === TOOL_ITEMS.AI_BRUSH,
+          })}
+          onClick={() => setShowAiBrushModal(true)} 
+        >
+          <FaMagic />
+        </div>
       <div
         className={cx(classes.toolItem, {
           [classes.active]: activeToolItem === TOOL_ITEMS.LINE,
@@ -104,6 +108,13 @@ const Toolbar = () => {
       >
         <FaFont />
       </div>
+      <div className={classes.toolItem} onClick={() => {
+          if(window.confirm("Are you sure you want to clear the entire board? This action cannot be undone.")) {
+            clearCanvas();
+          }
+        }}>
+          <FaTrash />
+        </div>
       <div className={classes.toolItem} onClick={undo}>
         <FaUndoAlt />
       </div>
@@ -113,14 +124,15 @@ const Toolbar = () => {
       <div className={classes.toolItem} onClick={handleDownloadClick}>
         <FaDownload />
       </div>
-      <div className={classes.toolItem} onClick={toggleBackground}>
-        <FaAdjust />
-      </div>
+      <div className={classes.toolItem} onClick={toggleDarkMode}>
+          <FaAdjust />
+        </div>
       <div className={classes.toolItem} onClick={() => navigate("/") }>
         <CgProfile/>
       </div>
       
     </div>
+     {showAiBrushModal && <AiBrush onClose={() => setShowAiBrushModal(false)} />}
     </>
   );
 };

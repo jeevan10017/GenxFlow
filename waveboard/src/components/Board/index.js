@@ -1,18 +1,21 @@
-import { useContext, useEffect, useLayoutEffect, useRef } from "react";
+import { useContext, useEffect, useLayoutEffect, useRef,useState } from "react";
 import rough from "roughjs";
 import boardContext from "../../store/board-context";
 import { TOOL_ACTION_TYPES, TOOL_ITEMS } from "../../constants";
 import toolboxContext from "../../store/toolbox-context";
 import { updateCanvas } from "../../utils/api";
-
+import { drawElement } from "../../utils/draw";
 import classes from "./index.module.css";
 
-function Board() {
+function Board({ isDarkMode }) {
   const canvasRef = useRef();
   const textAreaRef = useRef();
   const containerRef = useRef();
+
+   const [cursorPosition, setCursorPosition] = useState({ x: 0, y: 0 });
   
   const {
+    activeToolItem,
     elements,
     toolActionType,
     viewport,
@@ -111,87 +114,87 @@ function Board() {
   }, [undo, redo, panViewport, zoomViewport, resetViewport]);
 
   // Render canvas with viewport transformation
-  useLayoutEffect(() => {
+useLayoutEffect(() => {
     const canvas = canvasRef.current;
     const context = canvas.getContext("2d");
-    
-    // Clear the entire canvas
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    
-    // Save the context state
+
+    // 1. Fill the background (screen space)
+    context.fillStyle = isDarkMode ? '#1f2937' : '#ffffff';
+    context.fillRect(0, 0, canvas.width, canvas.height);
+
+    // 2. Draw the static grid (screen space)
+    drawGrid(context, viewport, isDarkMode);
+
+    // 3. Apply transformations for drawing elements (world space)
     context.save();
-    
-    // Apply viewport transformation
     context.translate(viewport.x, viewport.y);
     context.scale(viewport.scale, viewport.scale);
-    
-    // Draw grid background (optional)
-    drawGrid(context, viewport);
-    
-    const roughCanvas = rough.canvas(canvas);
 
+    const roughCanvas = rough.canvas(canvas);
     elements.forEach((element) => {
-      context.save();
-      
-      switch (element.type) {
-        case TOOL_ITEMS.LINE:
-        case TOOL_ITEMS.RECTANGLE:
-        case TOOL_ITEMS.CIRCLE:
-        case TOOL_ITEMS.ARROW:
-          roughCanvas.draw(element.roughEle);
-          break;
-        case TOOL_ITEMS.BRUSH:
-          context.fillStyle = element.stroke;
-          context.fill(element.path);
-          break;
-        case TOOL_ITEMS.TEXT:
-          context.textBaseline = "top";
-          context.font = `${element.size}px Caveat`;
-          context.fillStyle = element.stroke;
-          context.fillText(element.text, element.x1, element.y1);
-          break;
-        default:
-          throw new Error("Type not recognized");
-      }
-      
-      context.restore();
+        drawElement({ roughCanvas, context, element });
     });
 
-    // Restore the context state
+    // 4. Restore context to draw UI elements (screen space)
     context.restore();
-  }, [elements, viewport]);
 
+    
+
+   const isDrawingToolActive = [
+        TOOL_ITEMS.BRUSH, TOOL_ITEMS.AI_BRUSH, TOOL_ITEMS.LINE, TOOL_ITEMS.RECTANGLE,
+        TOOL_ITEMS.CIRCLE, TOOL_ITEMS.ARROW, TOOL_ITEMS.TRIANGLE, TOOL_ITEMS.DIAMOND
+    ].includes(activeToolItem);
+
+       if (isDrawingToolActive) {
+        context.fillStyle = isDarkMode ? 'white' : 'black';
+        context.beginPath();
+        context.arc(cursorPosition.x, cursorPosition.y, 4, 0, 2 * Math.PI); // A small dot
+        context.fill();
+    }
+
+    if (activeToolItem === TOOL_ITEMS.ERASER) {
+      const radius = 15; 
+      context.beginPath();
+      context.arc(cursorPosition.x, cursorPosition.y, radius, 0, 2 * Math.PI);
+      context.fill();
+      context.strokeStyle = isDarkMode ? 'rgba(255, 255, 255, 0.5)' : 'rgba(0, 0, 0, 0.5)';
+      context.lineWidth = 2;
+      context.beginPath();
+      context.arc(cursorPosition.x, cursorPosition.y, radius, 0, 2 * Math.PI);
+      context.stroke();
+    }
+  }, [elements, viewport, activeToolItem, cursorPosition, isDarkMode]);
+  
+
+
+  
   // Draw grid background
-  const drawGrid = (context, viewport) => {
-    const gridSize = 20;
-    const canvas = context.canvas;
-    
-    // Calculate grid bounds based on viewport
-    const startX = Math.floor(-viewport.x / viewport.scale / gridSize) * gridSize;
-    const startY = Math.floor(-viewport.y / viewport.scale / gridSize) * gridSize;
-    const endX = startX + Math.ceil(canvas.width / viewport.scale / gridSize) * gridSize + gridSize;
-    const endY = startY + Math.ceil(canvas.height / viewport.scale / gridSize) * gridSize + gridSize;
-    
-    context.strokeStyle = '#f0f0f0';
-    context.lineWidth = 0.5;
-    context.globalAlpha = 0.3;
-    
+const drawGrid = (context, viewport, isDarkMode) => {
+    const gridSize = 20; 
+    const { width, height } = context.canvas;
+
+    const offsetX = viewport.x % gridSize;
+    const offsetY = viewport.y % gridSize;
+
+    context.strokeStyle = isDarkMode ? '#4b5563' : '#d1d5db';
+    context.lineWidth = 1;
+    context.globalAlpha = 0.5;
+
     // Draw vertical lines
-    for (let x = startX; x <= endX; x += gridSize) {
+    for (let x = offsetX; x < width; x += gridSize) {
       context.beginPath();
-      context.moveTo(x, startY);
-      context.lineTo(x, endY);
+      context.moveTo(x, 0);
+      context.lineTo(x, height);
       context.stroke();
     }
-    
+
     // Draw horizontal lines
-    for (let y = startY; y <= endY; y += gridSize) {
+    for (let y = offsetY; y < height; y += gridSize) {
       context.beginPath();
-      context.moveTo(startX, y);
-      context.lineTo(endX, y);
+      context.moveTo(0, y);
+      context.lineTo(width, y);
       context.stroke();
     }
-    
     context.globalAlpha = 1;
   };
 
@@ -207,6 +210,9 @@ function Board() {
 
   // Get cursor style based on tool action type
   const getCursorStyle = () => {
+     if (activeToolItem === TOOL_ITEMS.ERASER) {
+      return 'none';
+    }
     switch (toolActionType) {
       case TOOL_ACTION_TYPES.PANNING:
         return 'grabbing';
@@ -223,11 +229,13 @@ function Board() {
   };
 
   const handleMouseMove = (event) => {
+    setCursorPosition({ x: event.clientX, y: event.clientY }); 
     boardMouseMoveHandler(event);
   };
 
   const handleMouseUp = () => {
     boardMouseUpHandler();
+
    
     const currentPath = window.location.pathname;
     const pathSegments = currentPath.split("/");
@@ -247,6 +255,34 @@ function Board() {
     }
     
     updateCanvas(extractedId, elements);
+  };
+
+const handleTouchStart = (event) => {
+    event.preventDefault();
+    const touch = event.touches[0];
+    const simulatedEvent = {
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        preventDefault: () => {}, // Provide a dummy function
+        button: 0, // Simulate left mouse button
+    };
+    boardMouseDownHandler(simulatedEvent, toolboxState);
+  };
+
+  const handleTouchMove = (event) => {
+    event.preventDefault();
+    const touch = event.touches[0];
+    const simulatedEvent = {
+        clientX: touch.clientX,
+        clientY: touch.clientY,
+        preventDefault: () => {},
+    };
+    setCursorPosition({ x: touch.clientX, y: touch.clientY }); // Also update cursor for touch
+    boardMouseMoveHandler(simulatedEvent);
+  };
+
+  const handleTouchEnd = () => {
+    boardMouseUpHandler();
   };
 
   const handleWheel = (event) => {
@@ -375,6 +411,9 @@ function Board() {
         onMouseMove={handleMouseMove}
         onMouseUp={handleMouseUp}
         onWheel={handleWheel}
+        onTouchStart={handleTouchStart}
+        onTouchMove={handleTouchMove}
+        onTouchEnd={handleTouchEnd}
         style={{
           display: 'block',
           cursor: getCursorStyle(),
