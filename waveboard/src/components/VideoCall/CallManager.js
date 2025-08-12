@@ -23,6 +23,13 @@ const CallManager = ({ roomId, currentUser }) => {
     const peersRef = useRef([]);
     const screenStreamRef = useRef(null);
 
+     // HIGHLIGHT: Use a ref to track the current call state inside socket handlers
+    const callStateRef = useRef(callState);
+    useEffect(() => {
+        callStateRef.current = callState;
+    }, [callState]);
+
+
     // --- MEDIA & PEER CONNECTION LOGIC ---
 
     const getMedia = useCallback(async (constraints = { video: true, audio: true }) => {
@@ -50,57 +57,72 @@ const CallManager = ({ roomId, currentUser }) => {
     }, [localStream]);
 
     // Main useEffect for handling all socket communications
-    useEffect(() => {
-        // --- INCOMING EVENTS FROM SERVER ---
-        socket.on("call-invitation", ({ callerInfo }) => {
-            if (callState === 'idle') {
+     useEffect(() => {
+        const handleCallInvitation = ({ callerInfo }) => {
+            if (callStateRef.current === 'idle') {
                 setIncomingCall(callerInfo);
                 setCallState('receiving');
             }
-        });
+        };
 
-        socket.on("call-accepted", ({ calleeInfo }) => {
-            if (callState === 'calling' || callState === 'active') {
-                const peer = createPeer(calleeInfo.id, currentUser.id, localStream);
-                peersRef.current.push({ peerID: calleeInfo.id, peer, user: calleeInfo });
+        const handleCallAccepted = ({ calleeInfo }) => {
+            if (callStateRef.current === 'calling' || callStateRef.current === 'active') {
                 setPeers(prev => [...prev, { peerID: calleeInfo.id, user: calleeInfo, streams: {} }]);
+                setLocalStream(stream => {
+                    const peer = createPeer(calleeInfo.id, currentUser.id, stream);
+                    peersRef.current.push({ peerID: calleeInfo.id, peer, user: calleeInfo });
+                    return stream;
+                });
             }
-        });
+        };
 
-        socket.on("user-joined", (payload) => {
-            const peer = addPeer(payload.signal, payload.callerID, localStream, payload.user);
-            peersRef.current.push({ peerID: payload.callerID, peer, user: payload.user });
+        const handleUserJoined = (payload) => {
             setPeers(prev => [...prev, { peerID: payload.callerID, user: payload.user, streams: {} }]);
-        });
-
-        socket.on("receiving-returned-signal", (payload) => {
+            setLocalStream(stream => {
+                const peer = addPeer(payload.signal, payload.callerID, stream, payload.user);
+                peersRef.current.push({ peerID: payload.callerID, peer, user: payload.user });
+                return stream;
+            });
+        };
+        
+        const handleReceivingReturnedSignal = (payload) => {
             const item = peersRef.current.find(p => p.peerID === payload.id);
             if (item) item.peer.signal(payload.signal);
-        });
+        };
 
-        socket.on('screen-share-status-update', ({ userId, isSharing }) => {
+        const handleScreenShareUpdate = ({ userId, isSharing }) => {
             setPeers(prevPeers => prevPeers.map(p =>
                 p.peerID === userId ? { ...p, isSharingScreen: isSharing } : p
             ));
-        });
+        };
 
-        socket.on("user-left", (id) => {
+        const handleUserLeft = (id) => {
             const peerToRemove = peersRef.current.find(p => p.peerID === id);
-            if (peerToRemove) peerToRemove.peer.destroy();
+            if (peerToRemove) {
+                try { peerToRemove.peer.destroy(); } catch (e) { console.error("Error destroying peer:", e); }
+            }
             peersRef.current = peersRef.current.filter(p => p.peerID !== id);
             setPeers(prev => prev.filter(p => p.peerID !== id));
-        });
-
-        // --- CLEANUP ---
-        return () => {
-            socket.off("call-invitation");
-            socket.off("call-accepted");
-            socket.off("user-joined");
-            socket.off("receiving-returned-signal");
-            socket.off('screen-share-status-update');
-            socket.off("user-left");
         };
-    }, [callState, localStream, currentUser]);
+
+        // Setup all listeners
+        socket.on("call-invitation", handleCallInvitation);
+        socket.on("call-accepted", handleCallAccepted);
+        socket.on("user-joined", handleUserJoined);
+        socket.on("receiving-returned-signal", handleReceivingReturnedSignal);
+        socket.on('screen-share-status-update', handleScreenShareUpdate);
+        socket.on("user-left", handleUserLeft);
+
+        // Cleanup all listeners on unmount
+        return () => {
+            socket.off("call-invitation", handleCallInvitation);
+            socket.off("call-accepted", handleCallAccepted);
+            socket.off("user-joined", handleUserJoined);
+            socket.off("receiving-returned-signal", handleReceivingReturnedSignal);
+            socket.off('screen-share-status-update', handleScreenShareUpdate);
+            socket.off("user-left", handleUserLeft);
+        };
+    }, [currentUser]); 
 
     // =======================================================
     // --- HIGHLIGHT: Fixed Track Handling Logic ---
@@ -175,23 +197,21 @@ const CallManager = ({ roomId, currentUser }) => {
         setIncomingCall(null);
     };
     
-    const handleEndCall = () => {
+     const handleEndCall = () => {
         stopAllMedia();
         setCallState('idle');
 
-        // HIGHLIGHT: Fix for 'process is not defined' error
         peersRef.current.forEach(p => {
             try {
                 p.peer.destroy();
             } catch (e) {
-                console.error("Error destroying peer:", e);
+                console.error("Error destroying peer on call end:", e);
             }
         });
-        // End Highlight
 
         peersRef.current = [];
         setPeers([]);
-        setEnlargedView(null); // Reset enlarged view on call end
+        setEnlargedView(null);
     };
 
     // --- MEDIA CONTROLS ---
