@@ -1,0 +1,28 @@
+.cursorContainer {
+  position: absolute;
+  top: 0;
+  left: 0;
+  z-index: 1000;
+  pointer-events: none;
+  transition: transform 0.05s linear; /* Smooth transition for cursor movement */
+  will-change: transform;
+}
+
+.cursorIcon {
+  filter: drop-shadow(0 1px 2px rgba(0, 0, 0, 0.5));
+}
+
+.tooltip {
+  position: absolute;
+  top: 18px; /* Position below the cursor icon */
+  left: 12px;
+  padding: 4px 8px;
+  border-radius: 6px;
+  font-size: 12px;
+  font-weight: 500;
+  color: white; /* White text for good contrast against varied backgrounds */
+  white-space: nowrap;
+  box-shadow: 0 2px 5px rgba(0, 0, 0, 0.2);
+  /* A subtle text shadow helps with readability against similar colors */
+  text-shadow: 0 1px 1px rgba(0, 0, 0, 0.4);
+}

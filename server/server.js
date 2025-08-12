@@ -4,7 +4,8 @@ const cors = require('cors');
 const connectDB = require('./config/db');
 const http = require('http');
 const { Server } = require('socket.io');
-
+const jwt = require('jsonwebtoken');
+const User = require('./models/userModal');
 const userRoutes = require('./routes/userRoutes');
 const canvasRoutes = require('./routes/canvasRoutes');
 
@@ -26,20 +27,13 @@ const allowedOrigins = [
 // Attach Socket.IO to the server with optimized settings for Render
 const io = new Server(server, {
   cors: {
-    origin: (origin, callback) => {
-      // Allow requests with no origin (mobile apps, etc.)
-      if (!origin) return callback(null, true);
-      
-      // Remove trailing slash for comparison
-      const normalizedOrigin = origin.replace(/\/$/, '');
-      const normalizedAllowed = allowedOrigins.map(o => o.replace(/\/$/, ''));
-      
-      if (normalizedAllowed.includes(normalizedOrigin)) {
-        return callback(null, true);
+   origin: (origin, callback) => {
+      if (!origin || allowedOrigins.includes(origin)) {
+        callback(null, true);
+      } else {
+        console.warn(`CORS blocked origin: ${origin}`);
+        callback(new Error('Not allowed by CORS'));
       }
-      
-      console.warn(`CORS blocked origin: ${origin}`);
-      callback(new Error('Not allowed by CORS'));
     },
     methods: ['GET', 'POST'],
     credentials: true
@@ -60,6 +54,20 @@ const io = new Server(server, {
     serverMaxWindowBits: 13
   }
 });
+
+
+const stringToColor = (str) => {
+  let hash = 0;
+  for (let i = 0; i < str.length; i++) {
+    hash = str.charCodeAt(i) + ((hash << 5) - hash);
+  }
+  let color = '#';
+  for (let i = 0; i < 3; i++) {
+    const value = (hash >> (i * 8)) & 0xFF;
+    color += ('00' + value.toString(16)).substr(-2);
+  }
+  return color;
+};
 
 // Store room information and user data with memory optimization
 const rooms = new Map();
@@ -133,36 +141,31 @@ const addUserToRoom = (roomId, socketId, userData = {}) => {
       users: new Map(),
       lastActivity: Date.now(),
       lastCanvasUpdate: null,
-      createdAt: Date.now()
     });
   }
   
   const room = rooms.get(roomId);
   room.users.set(socketId, {
     id: socketId,
-    joinTime: Date.now(),
     ...userData
   });
-  room.lastActivity = Date.now();
-  
+   room.lastActivity = Date.now();
   userRooms.set(socketId, roomId);
 };
 
-const removeUserFromRoom = (roomId, socketId) => {
-  if (rooms.has(roomId)) {
+const removeUserFromRoom = (socketId) => {
+  const roomId = userRooms.get(socketId);
+  if (roomId && rooms.has(roomId)) {
     const room = rooms.get(roomId);
     room.users.delete(socketId);
-    
-    // Clean up empty rooms immediately to save memory
     if (room.users.size === 0) {
       rooms.delete(roomId);
       console.log(`Cleaned up empty room: ${roomId}`);
-    } else {
-      room.lastActivity = Date.now();
     }
+    userRooms.delete(socketId);
+    return roomId;
   }
-  
-  userRooms.delete(socketId);
+  return null;
 };
 
 const getRoomUsers = (roomId) => {
@@ -170,128 +173,76 @@ const getRoomUsers = (roomId) => {
   return room ? Array.from(room.users.values()) : [];
 };
 
-// Connection handling with enhanced error management
 io.on('connection', (socket) => {
   console.log('User connected:', socket.id);
 
-  // Handle connection timeout for Render's limitations
-  const connectionTimeout = setTimeout(() => {
-    if (socket.connected) {
-      socket.emit('serverMessage', { 
-        type: 'warning', 
-        message: 'Connection will be optimized for free tier limitations' 
-      });
-    }
-  }, 1000);
-
-  socket.on('joinRoom', (roomId) => {
+  // --- MODIFIED joinRoom handler ---
+  socket.on('joinRoom', async ({ roomId, token }) => {
     try {
-      clearTimeout(connectionTimeout);
-      
-      if (!roomId || typeof roomId !== 'string' || roomId.length > 50) {
-        socket.emit('error', { message: 'Invalid room ID' });
-        return;
+      if (!roomId || !token) {
+        return socket.emit('error', { message: 'Invalid room or token.' });
       }
 
-      const previousRoom = userRooms.get(socket.id);
-      if (previousRoom && previousRoom !== roomId) {
-        socket.leave(previousRoom);
-        removeUserFromRoom(previousRoom, socket.id);
-        socket.to(previousRoom).emit('userLeft', {
-          userId: socket.id,
-          timestamp: Date.now()
-        });
+      const verified = jwt.verify(token, process.env.JWT_SECRET);
+      const user = await User.findById(verified.id).select('name email');
+      if (!user) {
+        return socket.emit('error', { message: 'Authentication failed.' });
+      }
+
+      // Leave previous room if any
+      const previousRoomId = userRooms.get(socket.id);
+      if (previousRoomId) {
+        socket.leave(previousRoomId);
+        removeUserFromRoom(socket.id);
+        io.in(previousRoomId).emit('roomUsers', getRoomUsers(previousRoomId));
       }
 
       socket.join(roomId);
       addUserToRoom(roomId, socket.id, {
-        userName: `User-${socket.id.slice(-6)}`
+        name: user.name,
+        email: user.email,
+        color: stringToColor(user._id.toString()),
       });
 
-      console.log(`User ${socket.id} joined room ${roomId}`);
-
-      const roomUsers = getRoomUsers(roomId);
-      socket.emit('roomUsers', roomUsers);
-
+      console.log(`User ${user.name} (${socket.id}) joined room ${roomId}`);
+      
+      // Broadcast the new list of users to everyone in the room
+      io.in(roomId).emit('roomUsers', getRoomUsers(roomId));
+      
       const room = rooms.get(roomId);
       if (room && room.lastCanvasUpdate) {
-        socket.emit('canvasUpdate', sanitizeCanvasData(room.lastCanvasUpdate));
+        socket.emit('canvasUpdate', room.lastCanvasUpdate);
       }
 
-      socket.to(roomId).emit('userJoined', {
-        userId: socket.id,
-        userName: `User-${socket.id.slice(-6)}`,
-        timestamp: Date.now()
-      });
-
     } catch (error) {
-      console.error('Error joining room:', error);
-      socket.emit('error', { message: 'Failed to join room' });
+      console.error('Join room error:', error.message);
+      socket.emit('error', { message: 'Failed to join room. Invalid token.' });
     }
   });
 
   socket.on('leaveRoom', (roomId) => {
-    try {
-      if (!roomId) return;
-      
-      socket.leave(roomId);
-      removeUserFromRoom(roomId, socket.id);
-
-      socket.to(roomId).emit('userLeft', {
-        userId: socket.id,
-        timestamp: Date.now()
-      });
-
-    } catch (error) {
-      console.error('Error leaving room:', error);
-    }
+    socket.leave(roomId);
+    removeUserFromRoom(socket.id);
+    // Broadcast updated user list
+    io.in(roomId).emit('roomUsers', getRoomUsers(roomId));
   });
+
 
   // Optimized canvas update handling with throttling
   let lastCanvasUpdate = 0;
   const CANVAS_UPDATE_THROTTLE = 50; // 50ms throttle
 
   socket.on('canvasUpdate', (data) => {
-    try {
-      const now = Date.now();
-      if (now - lastCanvasUpdate < CANVAS_UPDATE_THROTTLE) {
-        return; // Throttle updates to reduce server load
-      }
-      lastCanvasUpdate = now;
-
-      const { roomId, type, elements, timestamp, ...updateData } = data;
-      
-      if (!roomId) {
-        console.error('No roomId provided for canvas update');
-        return;
-      }
-
-      const sanitizedData = sanitizeCanvasData({
-        type,
-        elements,
-        timestamp: timestamp || Date.now(),
-        userId: socket.id,
-        ...updateData
-      });
-
-      if (rooms.has(roomId)) {
-        const room = rooms.get(roomId);
-        room.lastActivity = Date.now();
-        
-        if (elements && Array.isArray(elements) && elements.length > 0) {
-          room.lastCanvasUpdate = sanitizedData;
-        }
-      }
-
-      socket.to(roomId).emit('canvasUpdate', sanitizedData);
-
-    } catch (error) {
-      console.error('Error handling canvas update:', error);
-      socket.emit('error', { 
-        message: 'Failed to process canvas update',
-        details: process.env.NODE_ENV === 'development' ? error.message : 'Update failed'
-      });
+    const { roomId, ...updateData } = data;
+    if (!roomId) return;
+    
+    // Cache the latest canvas state for new joiners
+    const room = rooms.get(roomId);
+    if (room && data.elements) {
+        room.lastCanvasUpdate = updateData;
     }
+
+    socket.to(roomId).emit('canvasUpdate', updateData);
   });
 
   // Throttled cursor updates
@@ -299,54 +250,43 @@ io.on('connection', (socket) => {
   const CURSOR_UPDATE_THROTTLE = 100; // 100ms throttle
 
   socket.on('userCursor', (data) => {
-    try {
-      const now = Date.now();
-      if (now - lastCursorUpdate < CURSOR_UPDATE_THROTTLE) {
-        return;
-      }
-      lastCursorUpdate = now;
+    const now = Date.now();
+    if (now - lastCursorUpdate < CURSOR_UPDATE_THROTTLE) {
+      return;
+    }
+    lastCursorUpdate = now;
 
-      const { roomId, x, y, action, timestamp } = data;
-      
-      if (!roomId || typeof x !== 'number' || typeof y !== 'number') {
-        return;
-      }
-
+    const { roomId, x, y } = data;
+    if (!roomId || typeof x !== 'number' || typeof y !== 'number') return;
+    
+    const room = rooms.get(roomId);
+    if (room && room.users.has(socket.id)) {
+      const user = room.users.get(socket.id);
       socket.to(roomId).emit('userCursor', {
         userId: socket.id,
-        x: Math.round(x),
-        y: Math.round(y),
-        action,
-        timestamp: timestamp || Date.now()
+        x,
+        y,
+        color: user.color,
+        email: user.email,
       });
-
-    } catch (error) {
-      console.error('Error handling cursor update:', error);
     }
   });
 
   socket.on('disconnect', (reason) => {
-    clearTimeout(connectionTimeout);
     console.log('User disconnected:', socket.id, 'Reason:', reason);
-    
-    const roomId = userRooms.get(socket.id);
+    const roomId = removeUserFromRoom(socket.id);
     if (roomId) {
-      removeUserFromRoom(roomId, socket.id);
-      socket.to(roomId).emit('userLeft', {
-        userId: socket.id,
-        timestamp: Date.now()
-      });
+      // Broadcast updated user list
+      io.in(roomId).emit('roomUsers', getRoomUsers(roomId));
     }
   });
 
   socket.on('error', (error) => {
     console.error('Socket error for user', socket.id, ':', error);
   });
-
-  socket.on('ping', () => {
-    socket.emit('pong', { timestamp: Date.now() });
-  });
 });
+
+
 
 // More aggressive cleanup for free tier
 setInterval(() => {
