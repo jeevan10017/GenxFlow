@@ -1,0 +1,118 @@
+.call-manager-container {
+  position: fixed;
+  right: 10px;
+  top: 100px;
+  width: 200px;
+  height: auto;
+  max-height: calc(100vh - 120px);
+  display: flex;
+  flex-direction: column;
+  background: rgba(30, 30, 30, 0.7);
+  backdrop-filter: blur(5px);
+  padding: 10px;
+  border-radius: 12px;
+  z-index: 1000;
+}
+
+
+.video-player-container.enlarged {
+    position: fixed;
+    top: 50%;
+    left: 50%;
+    transform: translate(-50%, -50%);
+    width: 80vw;
+    height: 80vh;
+    z-index: 1001; /* Ensure it's above other UI elements */
+    cursor: zoom-out;
+}
+
+/* --- IDLE STATE --- */
+.call-manager-idle {
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+.start-call-btn {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  background-color: #27ae60;
+  color: white;
+  border: none;
+  padding: 10px 15px;
+  border-radius: 8px;
+  cursor: pointer;
+  font-weight: bold;
+  transition: background-color 0.2s;
+}
+.start-call-btn:hover {
+  background-color: #2ecc71;
+}
+
+/* --- RECEIVING STATE --- */
+.incoming-call-prompt {
+  color: white;
+  text-align: center;
+}
+.incoming-call-prompt p {
+  font-size: 14px;
+  margin-bottom: 10px;
+}
+.prompt-buttons {
+  display: flex;
+  justify-content: space-around;
+}
+.prompt-buttons button {
+  border: none;
+  color: white;
+  width: 40px;
+  height: 40px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+.accept-btn { background-color: #27ae60; }
+.decline-btn { background-color: #c0392b; }
+
+/* --- ACTIVE STATE --- */
+.video-call-active {
+  display: flex;
+  flex-direction: column;
+  height: 100%;
+}
+.video-grid {
+  display: flex;
+  flex-direction: column;
+  gap: 10px;
+  overflow-y: auto;
+  flex-grow: 1;
+}
+.controls-bar {
+  display: flex;
+  justify-content: space-around;
+  padding-top: 10px;
+}
+.controls-bar button {
+  background: #4f4f4f;
+  border: none;
+  color: white;
+  padding: 10px;
+  border-radius: 50%;
+  cursor: pointer;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+  transition: background-color 0.2s;
+}
+.controls-bar button.on { background: #2f80ed; }
+.controls-bar button.off { background: #eb5757; }
+.controls-bar button:hover { filter: brightness(1.2); }
+
+/* --- CALLING STATUS --- */
+.calling-status{
+  color: white;
+  text-align: center;
+  font-style: italic;
+}

@@ -73,53 +73,8 @@ const stringToColor = (str) => {
 const rooms = new Map();
 const userRooms = new Map();
 const MAX_ROOMS = 50; // Limit rooms to prevent memory issues
-const MAX_ELEMENTS_PER_CANVAS = 1000; // Limit canvas elements
 
-// Enhanced helper function to safely serialize canvas data
-const sanitizeCanvasData = (data) => {
-  if (!data) return data;
-  
-  try {
-    let cleanData = { ...data };
-    
-    // If elements array exists, clean and limit it
-    if (cleanData.elements && Array.isArray(cleanData.elements)) {
-      // Limit number of elements to prevent memory issues
-      if (cleanData.elements.length > MAX_ELEMENTS_PER_CANVAS) {
-        cleanData.elements = cleanData.elements.slice(-MAX_ELEMENTS_PER_CANVAS);
-        console.warn(`Canvas elements limited to ${MAX_ELEMENTS_PER_CANVAS} for memory optimization`);
-      }
-      
-      cleanData.elements = cleanData.elements.map(element => {
-        const cleanElement = { ...element };
-        
-        // Remove non-serializable properties
-        if (cleanElement.path && typeof cleanElement.path === 'object') {
-          delete cleanElement.path;
-        }
-        
-        // Ensure stroke and fill are strings
-        if (typeof cleanElement.stroke === 'object') {
-          cleanElement.stroke = '#000000';
-        }
-        if (typeof cleanElement.fill === 'object') {
-          cleanElement.fill = 'transparent';
-        }
-        
-        // Remove unnecessary properties to reduce payload size
-        delete cleanElement.seed;
-        delete cleanElement.versionNonce;
-        
-        return cleanElement;
-      });
-    }
-    
-    return cleanData;
-  } catch (error) {
-    console.error('Error sanitizing canvas data:', error);
-    return { ...data, elements: [] };
-  }
-};
+
 
 // Enhanced room management with memory limits
 const addUserToRoom = (roomId, socketId, userData = {}) => {
@@ -178,47 +133,48 @@ io.on('connection', (socket) => {
 
   // --- MODIFIED joinRoom handler ---
   socket.on('joinRoom', async ({ roomId, token }) => {
-    try {
-      if (!roomId || !token) {
-        return socket.emit('error', { message: 'Invalid room or token.' });
-      }
-
-      const verified = jwt.verify(token, process.env.JWT_SECRET);
-      const user = await User.findById(verified.id).select('name email');
-      if (!user) {
-        return socket.emit('error', { message: 'Authentication failed.' });
-      }
+   try {
+            if (!roomId || !token) {
+                return socket.emit('error', { message: 'Invalid room or token.' });
+            }
+            const verified = jwt.verify(token, process.env.JWT_SECRET);
+            const user = await User.findById(verified.id).select('name email');
+            if (!user) {
+                return socket.emit('error', { message: 'Authentication failed.' });
+            }
 
       // Leave previous room if any
-      const previousRoomId = userRooms.get(socket.id);
-      if (previousRoomId) {
-        socket.leave(previousRoomId);
-        removeUserFromRoom(socket.id);
-        io.in(previousRoomId).emit('roomUsers', getRoomUsers(previousRoomId));
-      }
+       const previousRoomId = userRooms.get(socket.id);
+            if (previousRoomId) {
+                socket.leave(previousRoomId);
+                removeUserFromRoom(socket.id);
+                io.in(previousRoomId).emit('roomUsers', getRoomUsers(previousRoomId));
+            }
 
-      socket.join(roomId);
-      addUserToRoom(roomId, socket.id, {
-        name: user.name,
-        email: user.email,
-        color: stringToColor(user._id.toString()),
-      });
-
+            socket.join(roomId);
+            addUserToRoom(roomId, socket.id, {
+                name: user.name,
+                email: user.email,
+                color: stringToColor(user._id.toString()),
+            });
       console.log(`User ${user.name} (${socket.id}) joined room ${roomId}`);
       
       // Broadcast the new list of users to everyone in the room
-      io.in(roomId).emit('roomUsers', getRoomUsers(roomId));
-      
-      const room = rooms.get(roomId);
-      if (room && room.lastCanvasUpdate) {
-        socket.emit('canvasUpdate', room.lastCanvasUpdate);
-      }
+       io.in(roomId).emit('roomUsers', getRoomUsers(roomId));
+            
+            const room = rooms.get(roomId);
+            if (room && room.lastCanvasUpdate) {
+                socket.emit('canvasUpdate', room.lastCanvasUpdate);
+            }
+//       const usersInThisRoom = getRoomUsers(roomId).filter(user => user.id !== socket.id);
+//     socket.emit("all-users", usersInThisRoom);
 
     } catch (error) {
       console.error('Join room error:', error.message);
       socket.emit('error', { message: 'Failed to join room. Invalid token.' });
     }
   });
+  
 
   socket.on('leaveRoom', (roomId) => {
     socket.leave(roomId);
@@ -272,14 +228,49 @@ io.on('connection', (socket) => {
     }
   });
 
-  socket.on('disconnect', (reason) => {
-    console.log('User disconnected:', socket.id, 'Reason:', reason);
-    const roomId = removeUserFromRoom(socket.id);
-    if (roomId) {
-      // Broadcast updated user list
-      io.in(roomId).emit('roomUsers', getRoomUsers(roomId));
-    }
-  });
+
+   // =======================================================
+    // --- HIGHLIGHT: Cleaned-Up WebRTC Signaling Handlers ---
+    // This is the complete and correct logic for an invitation-based call.
+    // =======================================================
+
+    // 1. A user starts a call, inviting everyone in the room
+    socket.on("initiate-call", ({ roomId, callerInfo }) => {
+        socket.to(roomId).emit("call-invitation", { callerInfo });
+    });
+
+    // 2. A user accepts the call and notifies the original caller
+    socket.on("accept-call", ({ callerId, calleeInfo }) => {
+        io.to(callerId).emit("call-accepted", { calleeInfo });
+    });
+
+    // 3. Exchange of WebRTC signals (Offer/Answer/ICE) after call is accepted
+    socket.on("sending-signal", payload => {
+        io.to(payload.userToSignal).emit('user-joined', { signal: payload.signal, callerID: payload.callerID });
+    });
+
+    socket.on("returning-signal", payload => {
+        io.to(payload.callerID).emit('receiving-returned-signal', { signal: payload.signal, id: socket.id });
+    });
+     socket.on('screen-share-changed', ({ roomId, isSharing }) => {
+        // Broadcast the change to everyone else in the room
+        socket.to(roomId).emit('screen-share-status-update', {
+            userId: socket.id,
+            isSharing: isSharing
+        });
+    });
+
+    // =======================================================
+    // --- End of Highlighted Section ---
+    // =======================================================
+
+socket.on('disconnect', (reason) => {
+    const roomId = removeUserFromRoom(socket.id);
+    if (roomId) {
+      io.in(roomId).emit('user-left', socket.id);
+      io.in(roomId).emit('roomUsers', getRoomUsers(roomId));
+    }
+  });
 
   socket.on('error', (error) => {
     console.error('Socket error for user', socket.id, ':', error);

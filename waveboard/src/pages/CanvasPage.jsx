@@ -8,14 +8,15 @@ import BoardProvider from '../store/BoardProvider';
 import ToolboxProvider from '../store/toolboxProvider';
 import socket from '../utils/socket';
 import RightSidebar from '../components/RightSidebar';
-import RemoteCursor from '../components/RemoteCursor/RemoteCursor'; // Import the new component
+import RemoteCursor from '../components/RemoteCursor/RemoteCursor'; 
 import { Palette, AlertTriangle, Frown } from "lucide-react";
+import CallManager from '../components/VideoCall/CallManager';
 import './CanvasPage.css';
 
 function CanvasPage() {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { canvasService } = useApi();
+  const { canvasService, user } = useApi();
   const [canvas, setCanvas] = useState(null);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState('');
@@ -125,10 +126,11 @@ function CanvasPage() {
   }, [id]);
 
   const handleCursorMove = useCallback((cursorData) => {
-    if (socket.connected) {
-      socket.emit('userCursor', { roomId: id, ...cursorData });
-    }
-  }, [id]);
+
+    if (socket.connected && connectedUsers.length > 1) {
+      socket.emit('userCursor', { roomId: id, ...cursorData });
+    }
+  }, [id, connectedUsers.length]);
 
   // Loading and Error states
   if (loading) {
@@ -186,15 +188,15 @@ function CanvasPage() {
     <div className={`h-screen bg-stone-100 relative font-sans ${isDarkMode ? 'dark' : ''}`}>
       {/* Render Remote Cursors */}
       {/* Conditionally render only when more than 1 user is present */}
-      {connectedUsers.length > 1 && Object.entries(cursors).map(([userId, data]) => (
-        <RemoteCursor
-          key={userId}
-          x={data.x}
-          y={data.y}
-          color={data.color}
-          email={data.email}
-        />
-      ))}
+       {connectedUsers.length > 1 && Object.entries(cursors).map(([userId, data]) => (
+        <RemoteCursor
+          key={userId}
+          x={data.x}
+          y={data.y}
+          color={data.color}
+          email={data.email}
+        />
+      ))}
       
        <div className="absolute top-4 left-4 z-20 flex flex-col items-start gap-2">
          {/* Connection Status */}
@@ -239,6 +241,10 @@ function CanvasPage() {
          isConnected={isConnected}
          isDarkMode={isDarkMode}
        />
+       {isConnected && user && connectedUsers.length > 1 && (
+        <CallManager roomId={id} currentUser={user} />
+      )}
+       
     </div>
   );
 }
