@@ -11,7 +11,8 @@ import {
 import toolboxContext from "../../store/toolbox-context";
 import boardContext from "../../store/board-context";
 
-const Toolbox = () => {
+// Pass isDarkMode as a prop
+const Toolbox = ({ isDarkMode }) => {
   const { activeToolItem } = useContext(boardContext);
   const { toolboxState, changeStroke, changeFill, changeSize } =
     useContext(toolboxContext);
@@ -25,6 +26,8 @@ const Toolbox = () => {
   const [offset, setOffset] = useState({ x: 0, y: 0 });
 
   const handleMouseDown = (e) => {
+    // Prevent dragging when interacting with form elements
+    if (e.target.tagName === 'INPUT' || e.target.type === 'color') return;
     setIsDragging(true);
     setOffset({
       x: e.clientX - position.x,
@@ -45,94 +48,78 @@ const Toolbox = () => {
   };
 
   return (
+    // Conditionally apply the .dark class based on the isDarkMode prop
     <div
-      className={classes.container}
+      className={cx(classes.container, { [classes.dark]: isDarkMode })}
       style={{ transform: `translate(${position.x}px, ${position.y}px)` }}
       onMouseDown={handleMouseDown}
       onMouseMove={handleMouseMove}
       onMouseUp={handleMouseUp}
       onMouseLeave={handleMouseUp}
     >
-      {/* <div className={classes.dragHandle}>Drag</div> */}
+      {/* Stroke Color Section */}
       {STROKE_TOOL_TYPES.includes(activeToolItem) && (
         <div className={classes.selectOptionContainer}>
-          <div className={classes.toolBoxLabel}>Stroke Color</div>
+          <div className={classes.toolBoxLabel}>Stroke</div>
           <div className={classes.colorsContainer}>
-            <div>
-              <input
-                className={classes.colorPicker}
-                type="color"
-                value={strokeColor}
-                onChange={(e) => changeStroke(activeToolItem, e.target.value)}
+            <input
+              className={classes.colorPicker}
+              type="color"
+              value={strokeColor}
+              onChange={(e) => changeStroke(activeToolItem, e.target.value)}
+            />
+            {Object.keys(COLORS).map((k) => (
+              <div
+                key={k}
+                className={cx(classes.colorBox, {
+                  [classes.activeColorBox]: strokeColor === COLORS[k],
+                })}
+                style={{ backgroundColor: COLORS[k] }}
+                onClick={() => changeStroke(activeToolItem, COLORS[k])}
               />
-            </div>
-            {Object.keys(COLORS).map((k) => {
-              return (
-                <div
-                  key={k}
-                  className={cx(classes.colorBox, {
-                    [classes.activeColorBox]: strokeColor === COLORS[k],
-                  })}
-                  style={{ backgroundColor: COLORS[k] }}
-                  onClick={() => changeStroke(activeToolItem, COLORS[k])}
-                />
-              );
-            })}
+            ))}
           </div>
         </div>
       )}
+
+      {/* Fill Color Section */}
       {FILL_TOOL_TYPES.includes(activeToolItem) && (
         <div className={classes.selectOptionContainer}>
-          <div className={classes.toolBoxLabel}>Fill Color</div>
+          <div className={classes.toolBoxLabel}>Fill</div>
           <div className={classes.colorsContainer}>
-            {fillColor === null ? (
-              <div
-                className={cx(classes.colorPicker, classes.noFillColorBox)}
-                onClick={() => changeFill(activeToolItem, COLORS.BLACK)}
-              />
-            ) : (
-              <div>
-                <input
-                  className={classes.colorPicker}
-                  type="color"
-                  value={fillColor} // FIXED: was using strokeColor instead of fillColor
-                  onChange={(e) => changeFill(activeToolItem, e.target.value)}
-                />
-              </div>
-            )}
             <div
+              title="No Fill"
               className={cx(classes.colorBox, classes.noFillColorBox, {
                 [classes.activeColorBox]: fillColor === null,
               })}
               onClick={() => changeFill(activeToolItem, null)}
             />
-            {Object.keys(COLORS).map((k) => {
-              return (
-                <div
-                  key={k}
-                  className={cx(classes.colorBox, {
-                    [classes.activeColorBox]: fillColor === COLORS[k],
-                  })}
-                  style={{ backgroundColor: COLORS[k] }}
-                  onClick={() => changeFill(activeToolItem, COLORS[k])}
-                />
-              );
-            })}
+            <input
+              className={classes.colorPicker}
+              type="color"
+              value={fillColor || '#ffffff'}
+              onChange={(e) => changeFill(activeToolItem, e.target.value)}
+            />
           </div>
         </div>
       )}
+
+      {/* Size/Thickness Section */}
       {SIZE_TOOL_TYPES.includes(activeToolItem) && (
         <div className={classes.selectOptionContainer}>
           <div className={classes.toolBoxLabel}>
-            {activeToolItem === TOOL_ITEMS.TEXT ? "Font Size" : "Brush Size"}
+            {activeToolItem === TOOL_ITEMS.TEXT ? "Size" : "Thickness"}
           </div>
           <input
+            className={classes.sizeSlider}
             type="range"
-            min={activeToolItem === TOOL_ITEMS.TEXT ? 32 : 1}
-            max={activeToolItem === TOOL_ITEMS.TEXT ? 80 : 10}
+            min={activeToolItem === TOOL_ITEMS.TEXT ? 16 : 1}
+            max={activeToolItem === TOOL_ITEMS.TEXT ? 128 : 50}
             step={1}
             value={size}
-            onChange={(event) => changeSize(activeToolItem, parseInt(event.target.value, 40))}
+            onChange={(event) =>
+              changeSize(activeToolItem, parseInt(event.target.value, 10))
+            }
           />
         </div>
       )}

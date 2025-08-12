@@ -1,66 +1,55 @@
+/* --- Base Container --- */
 .container {
-  position: absolute;
-  top: 50%;
-  left: 20px; /* Changed from left: 5% to fixed left position */
-  transform: translateY(-50%); /* Changed from translate(-50%, -50%) to only center vertically */
-  padding: 16px;
-  border: 1px solid rgba(0, 0, 0, 0.1);
-  border-radius: 8px;
-  backdrop-filter: blur(1px);
-  box-shadow: 0 4px 6px rgba(0, 0, 0, 0.1);
-  background-color: transparent;
-  border: 2px solid #e6e6e6;
+  position: fixed;
+  z-index: 900;
+  top: 100px;
+  left: 10px;
+  width: 80px; /* Much narrower width for vertical layout */
+  padding: 8px;
+  display: flex;
+  flex-direction: column;
+  gap: 12px; /* Space between sections */
+  border-radius: 12px;
   cursor: move;
-  z-index: 1000;
-  width: 120px; /* Added fixed width for vertical layout */
-  max-height: 90vh; /* Prevent toolbox from exceeding viewport height */
-  overflow-y: auto; /* Add scrolling if content overflows */
+  transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
+
+  /* Light Mode Styles */
+  background-color: rgba(255, 255, 255, 0.85);
+  backdrop-filter: blur(5px);
+  border: 1px solid #e5e7eb;
+  box-shadow: 0 4px 12px rgba(0, 0, 0, 0.1);
 }
 
-.dragHandle {
-  background-color: rgb(99, 96, 96);
-  padding: 5px;
-  font-weight: 800;
-  color: rgb(115, 113, 113);
-  text-align: center;
-  cursor: move;
-  border-radius: 8px;
-  margin-bottom: 10px;
-}
-
+/* --- Section & Label Styles --- */
 .selectOptionContainer {
-  margin-bottom: 24px;
-}
-
-.selectOptionContainer:last-child {
-  margin-bottom: 0;
-}
-
-.selectOptionContainer:first-child {
-  padding-top: 20px;
+  display: flex;
+  flex-direction: column;
 }
 
 .toolBoxLabel {
-  display: block;
-  margin-bottom: 8px;
+  font-size: 11px;
   font-weight: 500;
-  color: rgb(99, 96, 96);
+  margin-bottom: 6px;
+  color: #4b5563; /* Light mode text */
+  transition: color 0.3s;
+  text-align: center;
 }
 
+/* --- Color Swatches in 2-column vertical grid --- */
 .colorsContainer {
-  display: flex;
-  flex-wrap: wrap;
-  align-items: center;
-  gap: 8px; /* Added gap for better spacing */
+  display: grid;
+  grid-template-columns: 1fr 1fr; /* Two columns */
+  gap: 4px;
+  justify-items: center;
 }
 
 .colorBox {
-  display: inline-block;
-  width: 24px; /* Slightly larger for better visibility */
-  height: 24px;
-  border-radius: 4px;
+  width: 20px;
+  height: 20px;
+  border-radius: 5px;
   cursor: pointer;
-  transition: transform 0.2s ease; /* Added hover effect */
+  border: 1px solid rgba(0, 0, 0, 0.1);
+  transition: transform 0.2s ease, box-shadow 0.2s;
 }
 
 .colorBox:hover {
@@ -68,101 +57,103 @@
 }
 
 .noFillColorBox {
-  background: linear-gradient(
-      to top left,
-      rgba(255, 0, 0, 0) 0%,
-      rgba(255, 0, 0, 0) calc(50% - 0.8px),
-      rgba(255, 0, 0, 1) 50%,
-      rgba(255, 0, 0, 0) calc(50% + 0.8px),
-      rgba(255, 0, 0, 0) 100%
-    ),
-    linear-gradient(
-      to top right,
-      rgba(255, 0, 0, 0) 0%,
-      rgba(255, 0, 0, 0) calc(50% - 0.8px),
-      rgba(255, 0, 0, 1) 50%,
-      rgba(255, 0, 0, 0) calc(50% + 0.8px),
-      rgba(255, 0, 0, 0) 100%
-    );
+  background-image: linear-gradient(to top left, transparent 47.5%, #ef4444 47.5%, #ef4444 52.5%, transparent 52.5%);
+  background-color: #fff;
 }
 
 .activeColorBox {
-  border: 2px solid #4a47b1;
-  box-shadow: 0 0 0 1px #4a47b1;
+  box-shadow: 0 0 0 2px #3b82f6;
 }
 
 .colorPicker {
-  width: 40px;
-  height: 40px;
-  border-radius: 8px;
-  border: 2px solid #ccc;
+  width: 20px;
+  height: 20px;
+  border: none;
+  padding: 0;
+  border-radius: 5px;
   cursor: pointer;
+  background-color: transparent; /* Allow native color preview */
 }
 
-/* Range slider styling for vertical layout */
-input[type="range"] {
+/* --- Size Slider --- */
+.sizeSlider {
   width: 100%;
-  margin: 8px 0;
+  margin: 4px 0;
   -webkit-appearance: none;
   appearance: none;
-  height: 6px;
+  height: 5px;
   border-radius: 3px;
-  background: #e0e0e0;
   outline: none;
+  background: #e5e7eb; /* Light mode track */
+  transition: background 0.3s;
 }
 
-input[type="range"]::-webkit-slider-thumb {
+.sizeSlider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 18px;
-  height: 18px;
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: #4a47b1;
+  background: #3b82f6; /* Light mode thumb */
   cursor: pointer;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-input[type="range"]::-moz-range-thumb {
-  width: 18px;
-  height: 18px;
+.sizeSlider::-moz-range-thumb {
+  width: 14px;
+  height: 14px;
   border-radius: 50%;
-  background: #4a47b1;
+  background: #3b82f6;
   cursor: pointer;
   border: none;
-  box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
 }
 
-/* Dark theme styles */
-.dark .container {
-  background-color: rgba(0, 0, 0, 0.1);
-  border-color: rgba(255, 255, 255, 0.2);
-}
-
-.dark .dragHandle {
-  background-color: rgba(165, 162, 162, 0.2);
-  color: white;
+/* --- Dark Mode Styles --- */
+.dark.container {
+  background-color: rgba(31, 41, 55, 0.85); /* gray-800 with transparency */
+  border: 1px solid #4b5563; /* gray-600 border */
+  backdrop-filter: blur(5px);
 }
 
 .dark .toolBoxLabel {
-  color: rgb(200, 200, 200);
+  color: #d1d5db; /* gray-300 */
 }
 
-.dark .colorPicker {
-  border: 2px solid rgb(67, 63, 63);
+.dark .activeColorBox {
+  box-shadow: 0 0 0 2px #60a5fa; /* blue-400 */
 }
 
-.dark .selectOptionContainer {
-  color: rgb(180, 180, 180);
+.dark .noFillColorBox {
+  background-color: #374151; /* gray-700 */
+  border-color: #6b7280; /* gray-500 */
 }
 
-.dark input[type="range"] {
-  background: #404040;
+.dark .sizeSlider {
+  background: #4b5563; /* gray-600 */
 }
 
-.dark input[type="range"]::-webkit-slider-thumb {
-  background: #6366f1;
+.dark .sizeSlider::-webkit-slider-thumb {
+  background: #60a5fa; /* blue-400 */
 }
 
-.dark input[type="range"]::-moz-range-thumb {
-  background: #6366f1;
+.dark .sizeSlider::-moz-range-thumb {
+  background: #60a5fa;
+}
+
+/* --- Responsive styles for larger screens --- */
+@media (min-width: 768px) {
+  .container {
+    left: 20px;
+    width: 90px;
+    padding: 10px;
+  }
+  
+  .colorBox {
+    width: 22px;
+    height: 22px;
+  }
+  
+  .colorPicker {
+    width: 22px;
+    height: 22px;
+  }
 }

@@ -258,7 +258,7 @@ function CanvasPage() {
           <ToolboxProvider isDarkMode={isDarkMode}>
             <Toolbar isDarkMode={isDarkMode} toggleDarkMode={toggleDarkMode} />
             <Board isDarkMode={isDarkMode} />
-            <Toolbox />
+            <Toolbox isDarkMode={isDarkMode} />
           </ToolboxProvider>
         </BoardProvider>
       </div>
@@ -269,6 +269,7 @@ function CanvasPage() {
         navigate={navigate}
         connectedUsers={connectedUsers}
         isConnected={isConnected}
+        isDarkMode={isDarkMode}
       />
     </div>
   );

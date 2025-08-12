@@ -2,7 +2,7 @@ import React, { useState } from 'react';
 import axios from 'axios';
 import { Users, Settings, Share2, Trash2, ChevronRight, ChevronDown } from 'lucide-react';
 
-const RightSidebar = ({ canvas, navigate, connectedUsers = [], isConnected = false }) => {
+const RightSidebar = ({ canvas, navigate, connectedUsers = [], isConnected = false, isDarkMode }) => {
   const [isCollapsed, setIsCollapsed] = useState(true);
   const [activeSection, setActiveSection] = useState('users');
   const [shareEmail, setShareEmail] = useState("");
@@ -12,13 +12,13 @@ const RightSidebar = ({ canvas, navigate, connectedUsers = [], isConnected = fal
   const [success, setSuccess] = useState("");
 
   const token = localStorage.getItem("token");
+  const BackendURL = process.env.REACT_APP_BACKEND_URL;
 
-  const handleShare = async () => {
+  const handleShare = () => {
     setShowShareModal(true);
     setError("");
     setSuccess("");
   };
-  const BackendURL = process.env.REACT_APP_BACKEND_URL; 
 
   const handleShareSubmit = async (e) => {
     e.preventDefault();
@@ -26,33 +26,18 @@ const RightSidebar = ({ canvas, navigate, connectedUsers = [], isConnected = fal
       setError("Email address is required");
       return;
     }
-
-    if (!canvas?._id) {
-      setError("No canvas selected for sharing");
-      return;
-    }
-
     setShareLoading(true);
     setError("");
     setSuccess("");
-
     try {
-      const res = await axios.put(
+      await axios.put(
         `${BackendURL}/api/canvas/share/${canvas._id}`,
         { sharedEmail: shareEmail },
-        {
-          headers: { Authorization: `Bearer ${token}` },
-        }
+        { headers: { Authorization: `Bearer ${token}` } }
       );
-      
-      if (res.status === 200) {
-        setSuccess(`Canvas shared successfully with ${shareEmail}!`);
-        setShareEmail("");
-        setTimeout(() => {
-          setShowShareModal(false);
-          setSuccess("");
-        }, 2000);
-      }
+      setSuccess(`Canvas shared with ${shareEmail}!`);
+      setShareEmail("");
+      setTimeout(() => setShowShareModal(false), 2000);
     } catch (err) {
       setError(err.response?.data?.message || "Failed to share canvas");
     } finally {
@@ -60,58 +45,34 @@ const RightSidebar = ({ canvas, navigate, connectedUsers = [], isConnected = fal
     }
   };
 
-  const closeShareModal = () => {
-    setShowShareModal(false);
-    setShareEmail("");
-    setError("");
-    setSuccess("");
-  };
-
+  const closeShareModal = () => setShowShareModal(false);
 
   const handleDelete = async () => {
-    if (window.confirm('Are you sure you want to delete this canvas? This action cannot be undone.')) {
+    if (window.confirm('Are you sure you want to delete this canvas? This cannot be undone.')) {
       try {
-        const res = await axios.delete(
-         `${BackendURL}/api/canvas/${canvas._id}`,
-          {
-            headers: { Authorization: `Bearer ${token}` },
-          }
-        );
-        if (res.status === 200) {
-          alert('Canvas deleted successfully!');
-          navigate('/'); // Navigate back to dashboard
-        } else {
-          alert('Failed to delete canvas');
-        }
+        await axios.delete(`${BackendURL}/api/canvas/${canvas._id}`, {
+          headers: { Authorization: `Bearer ${token}` },
+        });
+        alert('Canvas deleted!');
+        navigate('/');
       } catch (err) {
         alert(err.response?.data?.message || "Error deleting canvas");
       }
     }
   };
 
-  const toggleSection = (section) => {
-    setActiveSection(activeSection === section ? '' : section);
-  };
-
-  // Function to get user display name - handles different possible user object structures
-  const getUserDisplayName = (user) => {
-    return user.username || user.name || user.email || 'Anonymous User';
-  };
-
-  // Function to get user initial for avatar
-  const getUserInitial = (user) => {
-    const name = getUserDisplayName(user);
-    return name.charAt(0).toUpperCase();
-  };
+  const toggleSection = (section) => setActiveSection(activeSection === section ? '' : section);
+  const getUserDisplayName = (user) => user.username || user.name || user.email || 'Anonymous';
+  const getUserInitial = (user) => getUserDisplayName(user).charAt(0).toUpperCase();
 
   if (isCollapsed) {
     return (
       <div className="fixed top-4 right-4 z-40">
         <button
           onClick={() => setIsCollapsed(false)}
-          className="bg-white border border-gray-200 rounded-lg p-2 shadow-lg hover:shadow-xl transition-all duration-200"
+          className={`p-2 rounded-lg shadow-lg hover:shadow-xl transition-all ${isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white border border-gray-200'}`}
         >
-          <Settings size={20} className="text-gray-600" />
+          <Settings size={20} className={isDarkMode ? 'text-gray-400' : 'text-gray-600'} />
         </button>
       </div>
     );
@@ -119,197 +80,98 @@ const RightSidebar = ({ canvas, navigate, connectedUsers = [], isConnected = fal
 
   return (
     <>
-      <div className="fixed top-4 right-4 w-80 bg-white border border-gray-200 rounded-lg shadow-lg z-40 max-h-[calc(100vh-2rem)] overflow-hidden flex flex-col">
+      <div className={`fixed top-4 right-4 w-72 border rounded-lg shadow-lg z-40 max-h-[calc(100vh-2rem)] flex flex-col transition-colors ${isDarkMode ? 'bg-gray-800 border-gray-700' : 'bg-white border-gray-200'}`}>
         {/* Header */}
-        <div className="flex items-center justify-between p-4 border-b border-gray-200">
-          <h3 className="font-semibold text-gray-800">Canvas Info</h3>
-          <button
-            onClick={() => setIsCollapsed(true)}
-            className="text-gray-500 hover:text-gray-700 transition-colors"
-          >
+        <div className={`flex items-center justify-between p-3 border-b ${isDarkMode ? 'border-gray-600' : 'border-gray-200'}`}>
+          <h3 className={`font-semibold ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>Canvas Info</h3>
+          <button onClick={() => setIsCollapsed(true)} className={`transition-colors ${isDarkMode ? 'text-gray-400 hover:text-gray-200' : 'text-gray-500 hover:text-gray-700'}`}>
             <ChevronRight size={18} />
           </button>
         </div>
 
         <div className="flex-1 overflow-y-auto">
-          {/* Canvas Details */}
-          <div className="p-4 border-b border-gray-200">
-            <h4 className="font-medium text-gray-800 mb-2">{canvas?.title || canvas?.name || 'Untitled Canvas'}</h4>
-            <p className="text-sm text-gray-600 mb-3">
-              Created: {canvas?.createdAt ? new Date(canvas.createdAt).toLocaleDateString() : 'Unknown'}
-            </p>
-            <p className="text-sm text-gray-600">
-              Last modified: {canvas?.updatedAt ? new Date(canvas.updatedAt).toLocaleDateString() : 'Never'} 
-            </p>
+          {/* Details Section */}
+          <div className={`p-3 border-b ${isDarkMode ? 'border-gray-600' : 'border-gray-200'}`}>
+            <h4 className={`font-medium mb-1.5 ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>{canvas?.title || 'Untitled'}</h4>
+            <p className={`text-xs ${isDarkMode ? 'text-gray-400' : 'text-gray-600'}`}>Created: {new Date(canvas.createdAt).toLocaleDateString()}</p>
           </div>
 
-          {/* Connected Users Section */}
-          <div className="border-b border-gray-200">
-            <button
-              onClick={() => toggleSection('users')}
-              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
-            >
+          {/* Users Section */}
+          <div className={`border-b ${isDarkMode ? 'border-gray-600' : 'border-gray-200'}`}>
+            <button onClick={() => toggleSection('users')} className={`w-full flex items-center justify-between p-3 transition-colors ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
               <div className="flex items-center space-x-2">
-                <Users size={18} className="text-gray-600" />
-                <span className="font-medium text-gray-800">
-                  Connected Users ({connectedUsers.length})
-                </span>
+                <Users size={16} className={isDarkMode ? 'text-gray-400' : 'text-gray-600'} />
+                <span className={`font-medium text-sm ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>Users ({connectedUsers.length})</span>
               </div>
-              {activeSection === 'users' ? (
-                <ChevronDown size={16} className="text-gray-500" />
-              ) : (
-                <ChevronRight size={16} className="text-gray-500" />
-              )}
+              <ChevronDown size={16} className={`transition-transform ${activeSection === 'users' ? '' : '-rotate-90'} ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
             </button>
-
             {activeSection === 'users' && (
-              <div className="px-4 pb-4">
-                {!isConnected ? (
-                  <div className="text-center py-4">
-                    <div className="text-red-500 text-sm">Not connected to server</div>
+              <div className="px-3 pb-3 mt-1 space-y-1.5">
+                {connectedUsers.length > 0 ? connectedUsers.map((user) => (
+                  <div key={user.id} className={`flex items-center space-x-2 p-1.5 rounded-md ${isDarkMode ? 'bg-gray-700/50' : 'bg-gray-50'}`}>
+                    <div className="w-7 h-7 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center text-white text-xs font-medium">{getUserInitial(user)}</div>
+                    <p className={`text-sm font-medium truncate ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>{getUserDisplayName(user)}</p>
                   </div>
-                ) : connectedUsers.length === 0 ? (
-                  <div className="text-center py-4">
-                    <div className="text-gray-500 text-sm">Only you are here</div>
-                  </div>
-                ) : (
-                  <div className="space-y-2">
-                    {connectedUsers.map((user, index) => (
-                      <div
-                        key={user.id || user._id || index}
-                        className="flex items-center space-x-3 p-2 bg-gray-50 rounded-lg"
-                      >
-                        <div className="w-8 h-8 bg-gradient-to-br from-blue-400 to-purple-500 rounded-full flex items-center justify-center">
-                          <span className="text-white text-xs font-medium">
-                            {getUserInitial(user)}
-                          </span>
-                        </div>
-                        <div className="flex-1">
-                          <div className="text-sm font-medium text-gray-800">
-                            {getUserDisplayName(user)}
-                          </div>
-                          <div className="text-xs text-gray-500">Online</div>
-                        </div>
-                        <div className="w-2 h-2 bg-green-500 rounded-full"></div>
-                      </div>
-                    ))}
-                  </div>
-                )}
+                )) : <p className={`text-center text-xs py-2 ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`}>You're the only one here.</p>}
               </div>
             )}
           </div>
 
-          {/* Canvas Actions Section */}
-          <div className="border-b border-gray-200">
-            <button
-              onClick={() => toggleSection('actions')}
-              className="w-full flex items-center justify-between p-4 hover:bg-gray-50 transition-colors"
-            >
+          {/* Actions Section */}
+          <div className={`border-b ${isDarkMode ? 'border-gray-600' : 'border-gray-200'}`}>
+            <button onClick={() => toggleSection('actions')} className={`w-full flex items-center justify-between p-3 transition-colors ${isDarkMode ? 'hover:bg-gray-700' : 'hover:bg-gray-50'}`}>
               <div className="flex items-center space-x-2">
-                <Settings size={18} className="text-gray-600" />
-                <span className="font-medium text-gray-800">Canvas Actions</span>
+                <Settings size={16} className={isDarkMode ? 'text-gray-400' : 'text-gray-600'} />
+                <span className={`font-medium text-sm ${isDarkMode ? 'text-gray-200' : 'text-gray-800'}`}>Actions</span>
               </div>
-              {activeSection === 'actions' ? (
-                <ChevronDown size={16} className="text-gray-500" />
-              ) : (
-                <ChevronRight size={16} className="text-gray-500" />
-              )}
+              <ChevronDown size={16} className={`transition-transform ${activeSection === 'actions' ? '' : '-rotate-90'} ${isDarkMode ? 'text-gray-400' : 'text-gray-500'}`} />
             </button>
-
             {activeSection === 'actions' && (
-              <div className="px-4 pb-4 space-y-2">
-                <button
-                  onClick={handleShare}
-                  className="w-full flex items-center space-x-3 p-3 bg-blue-50 hover:bg-blue-100 rounded-lg transition-colors"
-                >
-                  <Share2 size={18} className="text-blue-600" />
-                  <span className="text-sm font-medium text-blue-800">Share Canvas</span>
+              <div className="px-3 pb-3 mt-1 space-y-1.5">
+                <button onClick={handleShare} className={`w-full flex items-center space-x-2 p-2 rounded-lg transition-colors ${isDarkMode ? 'bg-blue-900/40 hover:bg-blue-900/60' : 'bg-blue-50 hover:bg-blue-100'}`}>
+                  <Share2 size={16} className={isDarkMode ? 'text-blue-400' : 'text-blue-600'} />
+                  <span className={`text-sm font-medium ${isDarkMode ? 'text-blue-300' : 'text-blue-800'}`}>Share Canvas</span>
                 </button>
-
-                <button
-                  onClick={handleDelete}
-                  className="w-full flex items-center space-x-3 p-3 bg-red-50 hover:bg-red-100 rounded-lg transition-colors"
-                >
-                  <Trash2 size={18} className="text-red-600" />
-                  <span className="text-sm font-medium text-red-800">Delete Canvas</span>
+                <button onClick={handleDelete} className={`w-full flex items-center space-x-2 p-2 rounded-lg transition-colors ${isDarkMode ? 'bg-red-900/40 hover:bg-red-900/60' : 'bg-red-50 hover:bg-red-100'}`}>
+                  <Trash2 size={16} className={isDarkMode ? 'text-red-400' : 'text-red-600'} />
+                  <span className={`text-sm font-medium ${isDarkMode ? 'text-red-300' : 'text-red-800'}`}>Delete Canvas</span>
                 </button>
               </div>
             )}
-          </div>
-
-          {/* Connection Status */}
-          <div className="p-4">
-            <div className="text-xs text-gray-500 mb-2">Connection Status</div>
-            <div className={`flex items-center space-x-2 text-sm ${
-              isConnected ? 'text-green-600' : 'text-red-600'
-            }`}>
-              <div className={`w-2 h-2 rounded-full ${
-                isConnected ? 'bg-green-500' : 'bg-red-500'
-              }`}></div>
-              <span>{isConnected ? 'Real-time collaboration active' : 'Connection lost'}</span>
-            </div>
           </div>
         </div>
 
         {/* Footer */}
-        <div className="border-t border-gray-200 p-4">
-          <button
-            onClick={() => navigate('/')}
-            className="w-full px-4 py-2 bg-gray-100 hover:bg-gray-200 text-gray-700 rounded-lg transition-colors"
-          >
-            Back to Dashboard
+        <div className={`p-2 border-t ${isDarkMode ? 'border-gray-600' : 'border-gray-200'}`}>
+          <button onClick={() => navigate('/')} className={`w-full px-3 py-1.5 rounded-md transition-colors text-sm ${isDarkMode ? 'bg-gray-700 hover:bg-gray-600 text-gray-300' : 'bg-gray-100 hover:bg-gray-200 text-gray-700'}`}>
+            Dashboard
           </button>
         </div>
       </div>
 
       {/* Share Modal */}
       {showShareModal && (
-        <div className="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50">
-          <div className="bg-white rounded-lg p-6 w-full max-w-md mx-4">
-            <h3 className="text-lg font-semibold mb-4">Share Canvas</h3>
-            
-            {error && (
-              <div className="bg-red-50 text-red-500 p-3 rounded-md mb-4 text-sm">
-                {error}
-              </div>
-            )}
-
-            {success && (
-              <div className="bg-green-50 text-green-500 p-3 rounded-md mb-4 text-sm">
-                {success}
-              </div>
-            )}
-
+        <div className="fixed inset-0 bg-black/60 flex items-center justify-center z-50">
+          <div className={`rounded-lg p-6 w-full max-w-md mx-4 ${isDarkMode ? 'bg-gray-800 border border-gray-700' : 'bg-white'}`}>
+            <h3 className={`text-lg font-semibold mb-4 ${isDarkMode ? 'text-white' : 'text-gray-900'}`}>Share Canvas</h3>
+            {error && <div className={`p-3 rounded-md mb-4 text-sm ${isDarkMode ? 'bg-red-900/50 text-red-300' : 'bg-red-100 text-red-700'}`}>{error}</div>}
+            {success && <div className={`p-3 rounded-md mb-4 text-sm ${isDarkMode ? 'bg-green-900/50 text-green-300' : 'bg-green-100 text-green-700'}`}>{success}</div>}
             <form onSubmit={handleShareSubmit}>
               <div className="mb-4">
-                <label htmlFor="shareEmail" className="block text-sm font-medium text-gray-700 mb-2">
-                  Enter email address to share with:
-                </label>
+                <label htmlFor="shareEmail" className={`block text-sm font-medium mb-2 ${isDarkMode ? 'text-gray-300' : 'text-gray-700'}`}>Share with email:</label>
                 <input
                   type="email"
                   id="shareEmail"
                   value={shareEmail}
                   onChange={(e) => setShareEmail(e.target.value)}
                   placeholder="user@example.com"
-                  className="w-full px-3 py-2 border border-gray-300 rounded-md focus:ring-2 focus:ring-indigo-500 focus:border-indigo-500"
+                  className={`w-full px-3 py-2 border rounded-md focus:ring-2 focus:ring-indigo-500 ${isDarkMode ? 'bg-gray-700 border-gray-600 text-white placeholder-gray-400' : 'border-gray-300'}`}
                   required
                 />
               </div>
               <div className="flex gap-3 justify-end">
-                <button
-                  type="button"
-                  onClick={closeShareModal}
-                  className="px-4 py-2 text-gray-600 bg-gray-100 rounded-md hover:bg-gray-200 transition"
-                >
-                  Cancel
-                </button>
-                <button
-                  type="submit"
-                  disabled={shareLoading}
-                  className={`px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition ${
-                    shareLoading ? "opacity-50 cursor-not-allowed" : ""
-                  }`}
-                >
+                <button type="button" onClick={closeShareModal} className={`px-4 py-2 rounded-md transition ${isDarkMode ? 'bg-gray-600 text-gray-300 hover:bg-gray-500' : 'bg-gray-100 text-gray-600 hover:bg-gray-200'}`}>Cancel</button>
+                <button type="submit" disabled={shareLoading} className="px-4 py-2 bg-indigo-600 text-white rounded-md hover:bg-indigo-700 transition disabled:opacity-50">
                   {shareLoading ? "Sharing..." : "Share"}
                 </button>
               </div>
