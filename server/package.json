@@ -4,6 +4,7 @@
   "description": "",
   "main": "server.js",
   "dependencies": {
+    "agora-token": "^2.0.5",
     "axios": "^1.8.4",
     "bcrypt": "^5.1.1",
     "chalk": "^5.4.1",

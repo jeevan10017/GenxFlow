@@ -8,6 +8,7 @@ const jwt = require('jsonwebtoken');
 const User = require('./models/userModal');
 const userRoutes = require('./routes/userRoutes');
 const canvasRoutes = require('./routes/canvasRoutes');
+const agoraRoutes = require('./routes/agoraRoutes');
 
 // Connect to database
 connectDB();
@@ -260,9 +261,6 @@ io.on('connection', (socket) => {
         });
     });
 
-    // =======================================================
-    // --- End of Highlighted Section ---
-    // =======================================================
 
 socket.on('disconnect', (reason) => {
     const roomId = removeUserFromRoom(socket.id);
@@ -326,6 +324,7 @@ app.use(express.urlencoded({ extended: true, limit: '5mb' }));
 // Routes
 app.use('/api/users', userRoutes);
 app.use('/api/canvas', canvasRoutes);
+app.use('/api/agora', agoraRoutes);
 
 // Enhanced health check with memory info
 app.get('/api/health', (req, res) => {

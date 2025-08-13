@@ -1,34 +1,29 @@
-
 import React, { useEffect, useRef } from 'react';
 import './VideoPlayer.css';
 
-// HIGHLIGHT: Added onClick and isEnlarged props to the component signature
-const VideoPlayer = ({ stream, name, isMuted, isCamOff, isScreenSharing, onClick, isEnlarged }) => {
-    const videoRef = useRef();
+const VideoPlayer = ({ track, name, isMuted, isCamOff, isScreenSharing, onClick, isEnlarged }) => {
+    const videoRef = useRef(null);
 
     useEffect(() => {
-        if (videoRef.current && stream) {
-            videoRef.current.srcObject = stream;
+        const playerContainer = videoRef.current;
+        if (playerContainer && track && typeof track.play === 'function') {
+            track.play(playerContainer);
         }
-    }, [stream]);
+        return () => {
+            if (track && typeof track.stop === 'function') {
+                track.stop();
+            }
+        };
+    }, [track]);
 
-    const showAvatar = isCamOff || (isScreenSharing && !stream?.getVideoTracks().length);
-    const videoClass = showAvatar ? 'hidden' : 'video-player__video';
+    // HIGHLIGHT: The avatar should show if the camera is off OR if there is no track available.
+    const showAvatar = isCamOff || !track;
+    const videoContainerClass = showAvatar ? 'hidden' : 'video-player__video';
     const avatarClass = showAvatar ? 'video-player__avatar' : 'hidden';
 
-    // HIGHLIGHT: The root div now handles the click and adds the 'enlarged' class when active.
     return (
-        <div
-            className={`video-player-container ${isEnlarged ? 'enlarged' : ''}`}
-            onClick={onClick}
-        >
-            <video
-                ref={videoRef}
-                className={videoClass}
-                autoPlay
-                playsInline
-                muted={isMuted}
-            />
+        <div className={`video-player-container ${isEnlarged ? 'enlarged' : ''}`} onClick={onClick}>
+            <div ref={videoRef} className={videoContainerClass}></div>
             <div className={avatarClass}>
                 {name ? name.charAt(0).toUpperCase() : 'U'}
             </div>
