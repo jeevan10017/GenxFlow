@@ -119,17 +119,19 @@ function Profile() {
             </h1>
           </div>
           <div className="flex items-center gap-4">
-            <span className="text-sm text-stone-600 hidden sm:block">
-              {user.email}
-            </span>
-            <button
-              onClick={logout}
-              className="flex items-center gap-2 text-sm font-semibold text-stone-700 hover:text-red-600 transition-colors"
-            >
-              <LogOut className="h-4 w-4" />
-              Logout
-            </button>
-          </div>
+                        {/* HIGHLIGHT: Display the user's name here */}
+                        <div className="text-right hidden sm:block">
+                            <p className="font-bold text-sm text-stone-800">{user.name}</p>
+                            <p className="text-xs text-stone-500">{user.email}</p>
+                        </div>
+                        <button
+                            onClick={logout}
+                            className="flex items-center gap-2 text-sm font-semibold text-stone-700 hover:text-red-600 transition-colors"
+                        >
+                            <LogOut className="h-4 w-4" />
+                            Logout
+                        </button>
+                    </div>
         </div>
       </header>
 

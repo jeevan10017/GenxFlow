@@ -6,53 +6,54 @@ import { Mic, MicOff, Video, VideoOff, ScreenShare, Phone, PhoneOff, XCircle } f
 import './CallManager.css';
 
 const AGORA_APP_ID = process.env.REACT_APP_AGORA_APP_ID;
-console.log("Agora App ID:", AGORA_APP_ID);
 
-const CallManager = ({ roomId, currentUser }) => {
-    // UI and Call Flow State
+const CallManager = ({ roomId, currentUser, isDarkMode }) => {
     const [callState, setCallState] = useState('idle');
     const [incomingCall, setIncomingCall] = useState(null);
     const [remoteUsers, setRemoteUsers] = useState([]);
 
-    // Local Media Track State
     const [localCameraTrack, setLocalCameraTrack] = useState(null);
     const [localAudioTrack, setLocalAudioTrack] = useState(null);
     const [localScreenTrack, setLocalScreenTrack] = useState(null);
 
-    // Control State
     const [isMuted, setIsMuted] = useState(false);
     const [isCamOff, setIsCamOff] = useState(false);
     const [isScreenSharing, setIsScreenSharing] = useState(false);
     const [enlargedView, setEnlargedView] = useState(null);
 
-    // Refs for stable objects that persist across re-renders
     const agoraClient = useRef(null);
     const hasJoined = useRef(false);
 
-    // =======================================================
-    // --- HIGHLIGHT: The Main Fix ---
-    // This useEffect hook now correctly sets up and tears down ALL event listeners.
-    // It runs only once, creating a stable environment for Agora and Socket.IO.
-    // =======================================================
-    useEffect(() => {
-        // Initialize Agora client only once
-        if (!agoraClient.current) {
-            agoraClient.current = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
-        }
+    // This effect runs ONCE to initialize the client and set up stable listeners
+   useEffect(() => {
+        agoraClient.current = AgoraRTC.createClient({ mode: 'rtc', codec: 'vp8' });
         const client = agoraClient.current;
 
-        // --- Agora Listeners ---
         const handleUserPublished = async (user, mediaType) => {
-    await client.subscribe(user, mediaType);
-    setRemoteUsers(prev => [...prev.filter(u => u.uid !== user.uid), user]);
-};
+            await client.subscribe(user, mediaType);
+
+             if (mediaType === "audio") {
+                user.audioTrack?.play();
+            }
+            setRemoteUsers(prev => [...prev.filter(u => u.uid !== user.uid), user]);
+        };
         const handleUserUnpublished = (user) => {
             setRemoteUsers(prev => prev.filter(u => u.uid !== user.uid));
         };
+
         client.on("user-published", handleUserPublished);
         client.on("user-unpublished", handleUserUnpublished);
 
-        // --- Socket.IO Listener ---
+        return () => {
+            if (client) {
+                client.off("user-published", handleUserPublished);
+                client.off("user-unpublished", handleUserUnpublished);
+            }
+        };
+    }, []);
+
+    // This effect handles the socket-based call invitations
+    useEffect(() => {
         const handleCallInvitation = ({ callerInfo }) => {
             if (callState === 'idle') {
                 setIncomingCall(callerInfo);
@@ -60,16 +61,10 @@ const CallManager = ({ roomId, currentUser }) => {
             }
         };
         socket.on("call-invitation", handleCallInvitation);
-
-        // --- Cleanup Function ---
         return () => {
             socket.off("call-invitation", handleCallInvitation);
-            if (client) {
-                client.off("user-published", handleUserPublished);
-                client.off("user-unpublished", handleUserUnpublished);
-            }
         };
-    }, [callState]); // Dependency on callState is needed to read its latest value inside the listener
+    }, [callState]);
 
     const joinChannel = useCallback(async () => {
         if (hasJoined.current) return;
@@ -102,7 +97,7 @@ const CallManager = ({ roomId, currentUser }) => {
         
         await client.leave();
         hasJoined.current = false;
-
+        
         setLocalAudioTrack(null);
         setLocalCameraTrack(null);
         setLocalScreenTrack(null);
@@ -118,77 +113,59 @@ const CallManager = ({ roomId, currentUser }) => {
         socket.emit("initiate-call", { roomId, callerInfo: { name: currentUser.name } });
         await joinChannel();
     };
-
     const handleAcceptCall = async () => {
         setCallState('active');
         setIncomingCall(null);
         await joinChannel();
     };
-
     const handleDeclineCall = () => { setCallState('idle'); setIncomingCall(null); };
     const handleEndCall = async () => { await leaveChannel(); setCallState('idle'); };
-    const toggleMute = async () => { if (localAudioTrack) { await localAudioTrack.setMuted(!isMuted); setIsMuted(!isMuted); } };
-    const toggleCamera = async () => { if (localCameraTrack) { await localCameraTrack.setEnabled(!isCamOff); setIsCamOff(!isCamOff); } };
 
-    const toggleScreenShare = async () => {
-    const client = agoraClient.current;
-
-    if (isScreenSharing) {
-        // --- STOPPING screen sharing ---
-        setIsScreenSharing(false);
-        
-        // Unpublish the screen track first
-        if (localScreenTrack) {
-            await client.unpublish(localScreenTrack);
-            localScreenTrack.close();
-            setLocalScreenTrack(null);
+    const toggleMute = async () => {
+        if (localAudioTrack) {
+            await localAudioTrack.setEnabled(isMuted);
+            setIsMuted(!isMuted);
         }
-        
-        // THEN, re-publish the camera track if it exists
+    };
+    const toggleCamera = async () => {
         if (localCameraTrack) {
-            await client.publish(localCameraTrack);
+            await localCameraTrack.setEnabled(!isCamOff);
+            setIsCamOff(!isCamOff);
         }
-    } else {
-        // --- STARTING screen sharing ---
-        try {
-            // "auto" finds the best configuration for screen sharing
-            const screenTrack = await AgoraRTC.createScreenVideoTrack({}, "auto");
-            
-            // Unpublish the camera track first
-            if (localCameraTrack) {
-                await client.unpublish(localCameraTrack);
-            }
-            
-            // THEN, publish the new screen track
-            await client.publish(screenTrack);
-            
-            // Update state AFTER successful publishing
-            setIsScreenSharing(true);
-            setLocalScreenTrack(screenTrack);
-
-            // Add a listener for when the user clicks the browser's "Stop sharing" button
-            screenTrack.on("track-ended", () => {
-                // This automatically reverts to the camera view
-                setIsScreenSharing(false);
-                setLocalScreenTrack(null);
-                client.unpublish(screenTrack);
-                if (localCameraTrack) {
-                    client.publish(localCameraTrack);
-                }
-            });
-        } catch (err) {
-            console.error("Screen share failed:", err);
-            // Revert state if something goes wrong
+    };
+    const toggleScreenShare = async () => {
+        const client = agoraClient.current;
+        if (isScreenSharing) {
             setIsScreenSharing(false);
-            // Re-publish camera track on failure
-            if (localCameraTrack) {
-                await client.publish(localCameraTrack);
+            if (localScreenTrack) {
+                await client.unpublish(localScreenTrack);
+                localScreenTrack.close();
+                setLocalScreenTrack(null);
+            }
+            if (localCameraTrack) await client.publish(localCameraTrack);
+        } else {
+            try {
+                const screenTrack = await AgoraRTC.createScreenVideoTrack({}, "auto");
+                setIsScreenSharing(true);
+                setLocalScreenTrack(screenTrack);
+                if (localCameraTrack) await client.unpublish(localCameraTrack);
+                await client.publish(screenTrack);
+
+                screenTrack.on("track-ended", () => {
+                    setIsScreenSharing(false);
+                    setLocalScreenTrack(null);
+                    if (localCameraTrack) client.publish(localCameraTrack);
+                });
+            } catch (err) {
+                console.error("Screen share failed", err);
+                setIsScreenSharing(false);
             }
         }
-    }
-};
+    };
 
-    const handleToggleEnlarge = (id) => setEnlargedView(prev => (prev?.id === id ? null : { id }));
+    const handleToggleEnlarge = (id) => {
+        setEnlargedView(prev => (prev?.id === id ? null : { id }));
+    };
 
     // --- RENDER LOGIC ---
     const renderIdleState = () => (
@@ -205,12 +182,14 @@ const CallManager = ({ roomId, currentUser }) => {
             </div>
         </div>
     );
-
     const renderActiveState = () => (
         <div className="video-call-active">
             <div className="video-grid">
+                {/* Local User's Videos */}
                 <VideoPlayer track={localCameraTrack} name={`${currentUser?.name} (You)`} isMuted={true} isCamOff={isCamOff} onClick={() => handleToggleEnlarge('local-camera')} isEnlarged={enlargedView?.id === 'local-camera'}/>
                 {isScreenSharing && <VideoPlayer track={localScreenTrack} name="Your Screen" isScreenSharing={true} isMuted={true} onClick={() => handleToggleEnlarge('local-screen')} isEnlarged={enlargedView?.id === 'local-screen'} />}
+                
+                {/* Remote Users' Videos */}
                 {remoteUsers.map(user => <VideoPlayer key={user.uid} track={user.videoTrack} name={`User ${user.uid}`} onClick={() => handleToggleEnlarge(user.uid)} isEnlarged={enlargedView?.id === user.uid} />)}
             </div>
             <div className="controls-bar">
@@ -221,13 +200,36 @@ const CallManager = ({ roomId, currentUser }) => {
             </div>
         </div>
     );
+
+     const getEnlargedTrack = () => {
+        if (!enlargedView) return null;
+        const { id } = enlargedView;
+        if (id === 'local-camera') return { track: localCameraTrack, name: `${currentUser.name} (You)`, isMuted: true };
+        if (id === 'local-screen') return { track: localScreenTrack, name: "Your Screen", isScreenSharing: true, isMuted: true };
+        const user = remoteUsers.find(u => u.uid === id);
+        if (user) return { track: user.videoTrack, name: `User ${user.uid}` };
+        return null;
+    };
+
+    const enlargedTrackInfo = getEnlargedTrack();
     
-    return (
-        <div className="call-manager-container">
-            {callState === 'idle' && renderIdleState()}
-            {callState === 'receiving' && renderReceivingState()}
-            {callState === 'active' && renderActiveState()}
-        </div>
+     return (
+        <>
+            <div className="call-manager-container">
+                {callState === 'idle' && renderIdleState()}
+                {callState === 'receiving' && renderReceivingState()}
+                {callState === 'active' && renderActiveState()}
+            </div>
+            
+            {/* HIGHLIGHT: Render the enlarged view modal as a top-level overlay */}
+            {enlargedView && enlargedTrackInfo && (
+                <div className="enlarged-view-modal-backdrop" onClick={() => handleToggleEnlarge(null)}>
+                    <div className="enlarged-view-modal-content" onClick={(e) => e.stopPropagation()}>
+                        <VideoPlayer {...enlargedTrackInfo} />
+                    </div>
+                </div>
+            )}
+        </>
     );
 };
 

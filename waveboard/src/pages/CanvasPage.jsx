@@ -242,7 +242,11 @@ function CanvasPage() {
          isDarkMode={isDarkMode}
        />
        {isConnected && user && connectedUsers.length > 1 && (
-        <CallManager roomId={id} currentUser={user} />
+         <CallManager 
+                    roomId={id} 
+                    currentUser={user} 
+                    isDarkMode={isDarkMode} 
+                />
       )}
        
     </div>

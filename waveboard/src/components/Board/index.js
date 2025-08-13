@@ -197,17 +197,25 @@ function Board({ isDarkMode }) {
     setCursorPosition({ x: event.clientX, y: event.clientY });
     boardMouseMoveHandler(event);
   };
-  const handleMouseUp = () => {
-    boardMouseUpHandler();
-    const currentPath = window.location.pathname;
-    const pathSegments = currentPath.split("/");
-    const extractedId = pathSegments.pop();
-    if (!extractedId || extractedId === '') {
-      console.error('No canvas ID found in URL!');
-      return;
-    }
-    updateCanvas(extractedId, elements);
-  };
+const handleMouseUp = () => {
+        boardMouseUpHandler();
+        
+        const currentPath = window.location.pathname;
+        if (currentPath === '/guest' || currentPath === '/') {
+            console.log("Guest canvas, not saving to server.");
+            return; 
+        }
+
+
+        const pathSegments = currentPath.split("/");
+        const canvasId = pathSegments.pop();
+
+        if (canvasId) {
+            updateCanvas(canvasId, elements);
+        } else {
+            console.error('Could not find a valid canvas ID to save.');
+        }
+    };
 
   // Touch handlers
   const handleTouchStart = (event) => {
