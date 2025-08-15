@@ -6,6 +6,7 @@ import toolboxContext from "../../store/toolbox-context";
 import { updateCanvas } from "../../utils/api";
 import { drawElement } from "../../utils/draw";
 import classes from "./index.module.css";
+import PanControls from "../PanControls"; 
 
 function Board({ isDarkMode }) {
   const canvasRef = useRef();
@@ -122,9 +123,10 @@ function Board({ isDarkMode }) {
     });
     context.restore();
     const isDrawingToolActive = [
-      TOOL_ITEMS.BRUSH, TOOL_ITEMS.AI_BRUSH, TOOL_ITEMS.LINE, TOOL_ITEMS.RECTANGLE,
-      TOOL_ITEMS.CIRCLE, TOOL_ITEMS.ARROW, TOOL_ITEMS.TRIANGLE, TOOL_ITEMS.DIAMOND
-    ].includes(activeToolItem);
+  TOOL_ITEMS.BRUSH, TOOL_ITEMS.AI_BRUSH, TOOL_ITEMS.AI_BRUSH_ML, 
+  TOOL_ITEMS.LINE, TOOL_ITEMS.RECTANGLE,
+  TOOL_ITEMS.CIRCLE, TOOL_ITEMS.ARROW, TOOL_ITEMS.TRIANGLE, TOOL_ITEMS.DIAMOND
+].includes(activeToolItem);
     if (isDrawingToolActive) {
       context.fillStyle = isDarkMode ? 'white' : 'black';
       context.beginPath();
@@ -146,28 +148,26 @@ function Board({ isDarkMode }) {
   }, [elements, viewport, activeToolItem, cursorPosition, isDarkMode]);
 
   // Draw grid background
-  const drawGrid = (context, viewport, isDarkMode) => {
-    const gridSize = 20;
-    const { width, height } = context.canvas;
-    const offsetX = viewport.x % gridSize;
-    const offsetY = viewport.y % gridSize;
-    context.strokeStyle = isDarkMode ? '#4b5563' : '#d1d5db';
-    context.lineWidth = 1;
-    context.globalAlpha = 0.5;
-    for (let x = offsetX; x < width; x += gridSize) {
-      context.beginPath();
-      context.moveTo(x, 0);
-      context.lineTo(x, height);
-      context.stroke();
-    }
+
+const drawGrid = (context, viewport, isDarkMode) => {
+  const gridSize = 20;
+  const { width, height } = context.canvas;
+  const offsetX = viewport.x % gridSize;
+  const offsetY = viewport.y % gridSize;
+  
+  context.fillStyle = isDarkMode ? '#718096' : '#9ca3af';
+  context.globalAlpha = 0.5;
+  
+  for (let x = offsetX; x < width; x += gridSize) {
     for (let y = offsetY; y < height; y += gridSize) {
       context.beginPath();
-      context.moveTo(0, y);
-      context.lineTo(width, y);
-      context.stroke();
+      context.arc(x, y, 1.0, 0, 2 * Math.PI);
+      context.fill();
     }
-    context.globalAlpha = 1;
-  };
+  }
+  
+  context.globalAlpha = 1;
+};
 
   // Focus textarea when writing
   useEffect(() => {
@@ -379,6 +379,7 @@ const handleMouseUp = () => {
           onBlur={(event) => textAreaBlurHandler(event.target.value)}
         />
       )}
+      <PanControls isDarkMode={isDarkMode} />
 
       <canvas
         ref={canvasRef}

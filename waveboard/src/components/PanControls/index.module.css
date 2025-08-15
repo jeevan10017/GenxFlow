@@ -1,0 +1,62 @@
+.panContainer {
+  position: fixed;
+  bottom: 15px;
+  left: 15px;
+  z-index: 1500;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 5px; /* Reduced gap */
+  background-color: rgba(255, 255, 255, 0.9);
+  padding: 8px; /* Reduced padding */
+  border-radius: 10px;
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  transition: background-color 0.3s, box-shadow 0.3s;
+}
+
+.panContainer button {
+  width: 35px; /* Smaller button */
+  height: 35px; /* Smaller button */
+  border: 1px solid #ccc;
+  border-radius: 50%;
+  background-color: #ffffff;
+  color: #333;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+  font-size: 1rem; /* Smaller icon */
+  cursor: pointer;
+  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+}
+
+.panContainer button:active {
+  background-color: #e0e0e0;
+}
+
+.middleRow {
+  display: flex;
+  gap: 25px; /* Reduced gap */
+}
+
+/* --- Dark Mode Styles --- */
+.panContainer.dark {
+  background-color: rgba(30, 41, 59, 0.9);
+  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+}
+
+.panContainer.dark button {
+  background-color: #4b5563;
+  color: #e5e7eb;
+  border-color: #6b7280;
+}
+
+.panContainer.dark button:active {
+  background-color: #374151;
+}
+
+/* Hide on larger screens */
+@media (min-width: 1024px) {
+  .panContainer {
+    display: none;
+  }
+}

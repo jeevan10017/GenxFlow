@@ -9,6 +9,7 @@ export const TOOL_ITEMS = {
     TRIANGLE: "TRIANGLE",
     DIAMOND: "DIAMOND",
     AI_BRUSH: "AI_BRUSH",
+    AI_BRUSH_ML: "AI_BRUSH_ML",
 };
 
 export const TOOL_ACTION_TYPES = {

@@ -9,6 +9,7 @@ import {
 import getStroke from "perfect-freehand";
 import { recognizeShape } from "../utils/recognizer";
 import toolboxContext from "./toolbox-context"; 
+import { predictDrawing } from "../ml/predict";
 
 const boardReducer = (state, action) => {
   switch (action.type) {
@@ -16,6 +17,7 @@ const boardReducer = (state, action) => {
       return {
         ...state,
         activeToolItem: action.payload.tool,
+        mlPredictionMode: action.payload.mode || null,
       };
     }
     case BOARD_ACTIONS.CHANGE_ACTION_TYPE:
@@ -44,18 +46,18 @@ const boardReducer = (state, action) => {
         },
       };
     }
-     case BOARD_ACTIONS.REPLACE_LAST_ELEMENT: {
-      const { newElement } = action.payload;
-      const elementsCopy = [...state.elements.slice(0, -1), newElement]; 
-      const newHistory = state.history.slice(0, state.index + 1);
-      newHistory.push(elementsCopy);
-      return {
-        ...state,
-        elements: elementsCopy,
-        history: newHistory,
-        index: state.index + 1,
-      };
-    }
+    case BOARD_ACTIONS.REPLACE_LAST_ELEMENT: { 
+            const { newElement } = action.payload;
+            const elementsCopy = [...state.elements.slice(0, -1), newElement];
+            const newHistory = state.history.slice(0, state.index + 1);
+            newHistory.push(elementsCopy);
+            return {
+                ...state,
+                elements: elementsCopy,
+                history: newHistory,
+                index: state.index + 1,
+            };
+        }
     case BOARD_ACTIONS.ZOOM_VIEWPORT: {
       const { scale, centerX, centerY } = action.payload;
       const newScale = Math.max(0.1, Math.min(5, state.viewport.scale * scale));
@@ -107,9 +109,9 @@ const boardReducer = (state, action) => {
       const canvasY = (clientY - state.viewport.y) / state.viewport.scale;
       
       // If AI_BRUSH is active, we still create a standard BRUSH element for drawing.
-      const elementType = state.activeToolItem === TOOL_ITEMS.AI_BRUSH 
-        ? TOOL_ITEMS.BRUSH 
-        : state.activeToolItem;
+      const elementType = (state.activeToolItem === TOOL_ITEMS.AI_BRUSH || state.activeToolItem === TOOL_ITEMS.AI_BRUSH_ML)
+    ? TOOL_ITEMS.BRUSH
+    : state.activeToolItem;
       const newElement = createElement(
         state.elements.length,
         canvasX,
@@ -324,6 +326,7 @@ const BoardProvider = ({
     const processedElements = processLoadedElements(initialElements);
     return {
       activeToolItem: TOOL_ITEMS.BRUSH,
+      mlPredictionMode: null, 
       toolActionType: TOOL_ACTION_TYPES.NONE,
       elements: processedElements,
       history: [processedElements],
@@ -436,11 +439,12 @@ const { toolboxState } = useContext(toolboxContext);
     };
   }, [canvasId, handleRemoteUpdate]);
 
-  const changeToolHandler = (tool) => {
+  const changeToolHandler = (tool, mode = null) => {
     dispatchBoardAction({
       type: BOARD_ACTIONS.CHANGE_TOOL,
       payload: {
         tool,
+        mode,
       },
     });
   };
@@ -571,7 +575,85 @@ const { toolboxState } = useContext(toolboxContext);
 const boardMouseUpHandler = () => {
     if (boardState.toolActionType === TOOL_ACTION_TYPES.WRITING) return;
     
-    // AI Brush Recognition Logic
+    // --- START of NEW ML LOGIC ---
+    if (boardState.activeToolItem === TOOL_ITEMS.AI_BRUSH_ML && boardState.elements.length > 0) {
+        const lastElement = boardState.elements[boardState.elements.length - 1];
+        if (lastElement.type === TOOL_ITEMS.BRUSH && lastElement.points.length > 10) {
+            
+            // Set action type to "Recognizing" to provide user feedback (optional)
+            dispatchBoardAction({ type: BOARD_ACTIONS.CHANGE_ACTION_TYPE, payload: { actionType: TOOL_ACTION_TYPES.RECOGNIZING }});
+
+            setTimeout(() => { 
+                const result = predictDrawing(lastElement.points, boardState.mlPredictionMode);
+
+                if (result) {
+                    console.log("Prediction Result:", result);
+                    const { type, label } = result;
+                    
+                    const xs = lastElement.points.map(p => p.x);
+                    const ys = lastElement.points.map(p => p.y);
+                    const minX = Math.min(...xs), minY = Math.min(...ys);
+                    const maxX = Math.max(...xs), maxY = Math.max(...ys);
+
+                    let newElement;
+
+                    if (type === 'shape') {
+                        const shapeTypeMap = {
+                            circle: TOOL_ITEMS.CIRCLE,
+                            rectangle: TOOL_ITEMS.RECTANGLE,
+                            triangle: TOOL_ITEMS.TRIANGLE,
+                            diamond: TOOL_ITEMS.DIAMOND,
+                            star: TOOL_ITEMS.DIAMOND, // Or create a custom STAR type
+                        };
+                        const shapeType = shapeTypeMap[label] || null;
+
+                        if (shapeType) {
+                            newElement = createElement(
+                                lastElement.id, minX, minY, maxX, maxY,
+                                {
+                                    type: shapeType,
+                                    stroke: lastElement.stroke,
+                                    fill: toolboxState[shapeType]?.fill || 'transparent',
+                                    size: lastElement.size,
+                                }
+                            );
+                        }
+                    }  else if (type === 'alphabet') {
+
+
+    // Calculate a proper font size based on the drawing's height.
+    // We use 90% of the bounding box height as the font size.
+    const drawingHeight = maxY - minY;
+    const newSize = Math.max(16, drawingHeight * 0.9); 
+
+    newElement = createElement(
+        lastElement.id, minX, minY, maxX, maxY,
+        {
+            type: TOOL_ITEMS.TEXT,
+            stroke: lastElement.stroke,
+            size: newSize 
+        }
+    );
+    newElement.text = label; 
+}
+
+                    if (newElement) {
+                        dispatchBoardAction({
+                            type: BOARD_ACTIONS.REPLACE_LAST_ELEMENT,
+                            payload: { newElement },
+                        });
+                        setTimeout(() => emitCanvasUpdate('drawComplete'), 0);
+                    }
+                }
+                
+                // Reset action type regardless of result
+                dispatchBoardAction({ type: BOARD_ACTIONS.CHANGE_ACTION_TYPE, payload: { actionType: TOOL_ACTION_TYPES.NONE }});
+            }, 0);
+            return; // Exit handler early
+        }
+    }
+    
+    // Algorithm for AI Brush recognition
     if (boardState.activeToolItem === TOOL_ITEMS.AI_BRUSH && boardState.elements.length > 0) {
       const lastElement = boardState.elements[boardState.elements.length - 1];
       if (lastElement.type === TOOL_ITEMS.BRUSH && lastElement.points.length > 5) {
@@ -762,6 +844,7 @@ const boardMouseUpHandler = () => {
 
   const boardContextValue = {
     activeToolItem: boardState.activeToolItem,
+    mlPredictionMode: boardState.mlPredictionMode,
     elements: boardState.elements,
     toolActionType: boardState.toolActionType,
     viewport: boardState.viewport,
@@ -789,6 +872,17 @@ const boardMouseUpHandler = () => {
       {children}
     </boardContext.Provider>
   );
+};
+
+const getBoundingBox = (points) => {
+    let minX = Infinity, minY = Infinity, maxX = -Infinity, maxY = -Infinity;
+    for (const p of points) {
+        minX = Math.min(minX, p.x);
+        minY = Math.min(minY, p.y);
+        maxX = Math.max(maxX, p.x);
+        maxY = Math.max(maxY, p.y);
+    }
+    return { minX, minY, maxX, maxY, width: maxX - minX, height: maxY - minY };
 };
 
 export default BoardProvider;

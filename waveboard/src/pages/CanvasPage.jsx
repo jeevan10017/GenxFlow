@@ -11,6 +11,7 @@ import RightSidebar from '../components/RightSidebar';
 import RemoteCursor from '../components/RemoteCursor/RemoteCursor'; 
 import { Palette, AlertTriangle, Frown } from "lucide-react";
 import CallManager from '../components/VideoCall/CallManager';
+import { loadModels } from '../ml/predict';
 import './CanvasPage.css';
 
 function CanvasPage() {
@@ -132,6 +133,10 @@ function CanvasPage() {
     }
   }, [id, connectedUsers.length]);
 
+useEffect(() => {
+        loadModels();
+    }, []);
+    
   // Loading and Error states
   if (loading) {
     return (

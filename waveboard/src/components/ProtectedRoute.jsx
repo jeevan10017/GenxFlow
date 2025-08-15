@@ -6,7 +6,6 @@ const ProtectedRoute = ({ children }) => {
   const { isAuthenticated, loading } = useApi();
 
   if (loading) {
-    // Optional: show a loading spinner while checking auth
     return <div>Loading...</div>; 
   }
 

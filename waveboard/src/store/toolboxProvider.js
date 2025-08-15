@@ -38,9 +38,13 @@ const initialToolboxState = {
     stroke: COLORS.BLACK,
     size: 2,
   }, 
-   [TOOL_ITEMS.AI_BRUSH]: {
+     [TOOL_ITEMS.AI_BRUSH]: { 
     stroke: COLORS.BLACK,
-    size: 2, 
+    size: 2,
+  },
+  [TOOL_ITEMS.AI_BRUSH_ML]: { 
+    stroke: COLORS.BLACK,
+    size: 2,
   },
   [TOOL_ITEMS.LINE]: {
     stroke: COLORS.BLACK,

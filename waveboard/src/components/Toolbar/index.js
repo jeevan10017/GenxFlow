@@ -22,6 +22,7 @@ import { TOOL_ITEMS } from "../../constants";
 import boardContext from "../../store/board-context";
 import { useNavigate } from "react-router-dom";
 import AiBrush from "../AiBrush";
+import { useApi } from "../../context/AppContext";
 
 const Toolbar = ({ isDarkMode, toggleDarkMode }) => {
   
@@ -29,6 +30,7 @@ const Toolbar = ({ isDarkMode, toggleDarkMode }) => {
     useContext(boardContext);
   const [showAiBrushModal, setShowAiBrushModal] = useState(false);
   const navigate = useNavigate();
+  const { isAuthenticated } = useApi();
 
   const handleDownloadClick = () => {
     const canvas = document.getElementById("canvas");
@@ -39,7 +41,13 @@ const Toolbar = ({ isDarkMode, toggleDarkMode }) => {
     anchor.click();
   };
 
-
+const handleAiBrushClick = () => {
+    if (isAuthenticated) {
+      setShowAiBrushModal(true);
+    } else {
+      alert("Please log in or register to use the AI Brush feature!");
+    }
+  };
 
   return (
     <>
@@ -54,9 +62,9 @@ const Toolbar = ({ isDarkMode, toggleDarkMode }) => {
       </div>
       <div
           className={cx(classes.toolItem, {
-            [classes.active]: activeToolItem === TOOL_ITEMS.AI_BRUSH,
+            [classes.active]: activeToolItem === TOOL_ITEMS.AI_BRUSH || activeToolItem === TOOL_ITEMS.AI_BRUSH_ML,
           })}
-          onClick={() => setShowAiBrushModal(true)} 
+          onClick={handleAiBrushClick} 
         >
           <FaMagic />
         </div>
@@ -132,7 +140,7 @@ const Toolbar = ({ isDarkMode, toggleDarkMode }) => {
       </div>
       
     </div>
-     {showAiBrushModal && <AiBrush onClose={() => setShowAiBrushModal(false)} />}
+     {showAiBrushModal && <AiBrush isDarkMode={isDarkMode} onClose={() => setShowAiBrushModal(false)} />}
     </>
   );
 };
