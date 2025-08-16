@@ -57,14 +57,14 @@ function Register() {
     };
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center p-4 bg-stone-100">
-            <div className="w-full max-w-4xl flex flex-col lg:flex-row bg-white shadow-2xl rounded-xl overflow-hidden border border-stone-200">
+        <div className="min-h-screen w-full flex items-center justify-center p-4 bg-white">
+            <div className="w-full max-w-4xl flex flex-col lg:flex-row  overflow-y-hidden ">
                 
                 {/* --- Image Section --- */}
                 <div className="w-full lg:w-2/5 min-h-[250px] lg:min-h-0 relative">
                     <img
                         className="h-full w-full object-cover"
-                        src="https://images.unsplash.com/photo-1557683316-973673baf926?q=80&w=2029"
+                        src="/loginRegisterPot.png"
                         alt="Abstract gradient background"
                     />
                 </div>
@@ -151,7 +151,7 @@ function Register() {
                         </p>
                           <p className="text-stone-600 mt-2">
                             Or{' '}
-                            <Link to="/guest" className="font-bold text-stone-800 hover:underline inline-flex items-center gap-1">
+                            <Link to="/guest" className="font-bold text-stone-800 hover:underline inline-flex items-center gap-1 cursor-pointer">
                                 <User className="h-4 w-4" /> Continue as Guest
                             </Link>
                         </p>

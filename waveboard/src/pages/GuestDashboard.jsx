@@ -34,27 +34,37 @@ const GuestDashboard = () => {
 
     return (
         <div className="h-screen bg-gray-100 relative">
-            {/* HIGHLIGHT: Container for all top-right buttons */}
-            <div className="absolute top-4 right-4 z-50 flex items-center gap-4">
-                <button
-                    onClick={() => navigate("/login")}
-                    className="px-4 py-2 bg-gray-200 text-gray-800 font-semibold rounded-lg shadow-md hover:bg-gray-300 transition-colors"
-                >
-                    Login
-                </button>
-                <button
-                    onClick={() => navigate("/register")}
-                    className="px-4 py-2 bg-gray-800 text-white font-semibold rounded-lg shadow-md hover:bg-black transition-colors"
-                >
-                    Register
-                </button>
-                <button
-                    onClick={handleSave}
-                    className="px-6 py-3 bg-blue-600 text-white font-semibold rounded-lg shadow-md hover:bg-blue-700"
-                >
-                    Save Your Work
-                </button>
-            </div>
+     <div className="absolute top-4 left-4 right-4 z-50 flex justify-between items-center">
+  {/* Logo on the left */}
+  <img 
+    src="/logo_light_nobg.png" 
+    alt="App Logo" 
+    className="h-10 w-auto drop-shadow-md"
+  />
+
+  {/* Buttons on the right */}
+  <div className="flex items-center gap-4">
+    <button
+      onClick={() => navigate("/login")}
+      className="px-4 py-2 bg-gray-200 text-gray-800 font-semibold rounded-lg shadow-md hover:bg-gray-300 transition-colors"
+    >
+      Login
+    </button>
+    <button
+      onClick={() => navigate("/register")}
+      className="px-4 py-2 bg-gray-800 text-white font-semibold rounded-lg shadow-md hover:bg-black transition-colors"
+    >
+      Register
+    </button>
+    <button
+      onClick={handleSave}
+      className="px-6 py-3 bg-zinc-950 text-white font-semibold rounded-lg shadow-md hover:bg-gray-950"
+    >
+      Save Your Work
+    </button>
+  </div>
+</div>
+
 
             <BoardProvider
                 canvasId="guest"
