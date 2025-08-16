@@ -57,14 +57,14 @@ function Register() {
     };
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center p-4 bg-white">
+        <div className="min-h-screen w-full flex items-center justify-center md:p-4 bg-white">
             <div className="w-full max-w-4xl flex flex-col lg:flex-row  overflow-y-hidden ">
                 
                 {/* --- Image Section --- */}
                 <div className="w-full lg:w-2/5 min-h-[250px] lg:min-h-0 relative">
                     <img
                         className="h-full w-full object-cover"
-                        src="/loginRegisterPot.png"
+                        src="/thin.png"
                         alt="Abstract gradient background"
                     />
                 </div>
@@ -73,7 +73,7 @@ function Register() {
                 <div className="w-full lg:w-3/5 flex flex-col justify-center p-8 sm:p-12">
                     <div>
                         <div className="text-center mb-8">
-                            <Brush className="mx-auto h-10 w-10 text-stone-700 mb-4" />
+                            {/* <Brush className="mx-auto h-10 w-10 text-stone-700 mb-4" /> */}
                             <h1 className="font-serif text-3xl sm:text-4xl font-bold text-stone-800">
                                 Join the Studio
                             </h1>
@@ -145,7 +145,7 @@ function Register() {
                      <div className="mt-8 text-center text-sm">
                         <p className="text-stone-600">
                             Already have an account?{" "}
-                            <Link to="/login" className="font-bold text-stone-800 hover:underline">
+                            <Link to="/login" className="font-bold text-stone-800 hover:underline cursor-pointer">
                                 Sign In
                             </Link>
                         </p>

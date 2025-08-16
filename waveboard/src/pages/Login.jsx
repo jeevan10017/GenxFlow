@@ -71,14 +71,14 @@ function Login() {
     };
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center p-4 bg-white">
+        <div className="min-h-screen w-full flex items-center justify-center md:p-4 bg-white">
             <div className="w-full max-w-4xl flex flex-col lg:flex-row   overflow-hidden ">
                 
                 {/* --- Image Section --- */}
                 <div className="w-full lg:w-2/5 min-h-[250px] lg:min-h-0 relative">
                     <img
                         className="h-full w-full object-cover"
-                        src="/logoRegLog.png"
+                        src="/thin.png"
                         alt="Abstract gradient background"
                     />
                 </div>
