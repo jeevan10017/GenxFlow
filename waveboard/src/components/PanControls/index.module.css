@@ -1,62 +1,94 @@
 .panContainer {
   position: fixed;
-  bottom: 15px;
-  left: 15px;
+  bottom: 10px;
+  left: 10px;
   z-index: 1500;
   display: flex;
   flex-direction: column;
   align-items: center;
-  gap: 5px; /* Reduced gap */
+  gap: 2px; /* Very small gap for compact design */
   background-color: rgba(255, 255, 255, 0.9);
-  padding: 8px; /* Reduced padding */
-  border-radius: 10px;
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.15);
+  padding: 4px; /* Minimal padding */
+  border-radius: 8px; /* Smaller radius */
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.1);
   transition: background-color 0.3s, box-shadow 0.3s;
+  backdrop-filter: blur(3px); /* Add subtle blur effect */
 }
 
 .panContainer button {
-  width: 35px; /* Smaller button */
-  height: 35px; /* Smaller button */
-  border: 1px solid #ccc;
-  border-radius: 50%;
+  width: 24px; /* Much smaller buttons */
+  height: 24px;
+  border: 1px solid #d1d5db;
+  border-radius: 4px; /* Square with rounded corners instead of circles */
   background-color: #ffffff;
-  color: #333;
+  color: #4b5563;
   display: flex;
   justify-content: center;
   align-items: center;
-  font-size: 1rem; /* Smaller icon */
+  font-size: 0.7rem; /* Much smaller icons */
   cursor: pointer;
-  transition: background-color 0.2s, color 0.2s, border-color 0.2s;
+  transition: all 0.2s ease;
+  opacity: 0.9;
+}
+
+.panContainer button:hover {
+  background-color: #f3f4f6;
+  transform: scale(1.05);
+  opacity: 1;
 }
 
 .panContainer button:active {
-  background-color: #e0e0e0;
+  background-color: #e5e7eb;
+  transform: scale(0.95);
 }
 
 .middleRow {
   display: flex;
-  gap: 25px; /* Reduced gap */
+  gap: 2px; /* Minimal gap between left/right buttons */
 }
 
 /* --- Dark Mode Styles --- */
 .panContainer.dark {
-  background-color: rgba(30, 41, 59, 0.9);
-  box-shadow: 0 2px 8px rgba(0, 0, 0, 0.3);
+  background-color: rgba(31, 41, 55, 0.9);
+  box-shadow: 0 2px 6px rgba(0, 0, 0, 0.2);
 }
 
 .panContainer.dark button {
+  background-color: #374151;
+  color: #d1d5db;
+  border-color: #4b5563;
+}
+
+.panContainer.dark button:hover {
   background-color: #4b5563;
-  color: #e5e7eb;
-  border-color: #6b7280;
 }
 
 .panContainer.dark button:active {
-  background-color: #374151;
+  background-color: #6b7280;
 }
 
-/* Hide on larger screens */
+/* Hide on larger screens - show only on mobile/tablet */
 @media (min-width: 1024px) {
   .panContainer {
     display: none;
+  }
+}
+
+/* Extra compact for very small screens */
+@media (max-width: 480px) {
+  .panContainer {
+    bottom: 8px;
+    left: 8px;
+    padding: 3px;
+  }
+  
+  .panContainer button {
+    width: 20px;
+    height: 20px;
+    font-size: 0.6rem;
+  }
+  
+  .middleRow {
+    gap: 1px;
   }
 }

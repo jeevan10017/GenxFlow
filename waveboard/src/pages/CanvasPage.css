@@ -1,29 +1,27 @@
-/* Light Mode Defaults (already exist in your other files, but good to have) */
 .h-screen {
-    --background: #f9fafb; /* bg-stone-100 */
-    --text-primary: #000000; /* text-stone-700 */
+    --background: #f9fafb; 
+    --text-primary: #000000;
     --toolbar-bg: white;
     --toolbar-border: #e5e7eb;
     --default-stroke: #000000;
 }
 
-/* Dark Mode Overrides */
+
 .dark {
-    --background: #151516; /* A dark gray */
-    --text-primary: #d1d5db; /* A light gray */
+    --background: #151516; 
+    --text-primary: #d1d5db; 
     --toolbar-bg: #374151;
     --toolbar-border: #4b5563;
     --default-stroke: #ffffff;
 }
 
-/* Apply variables */
 .h-screen {
     background-color: var(--background);
     color: var(--text-primary);
 }
 
 .dark .bg-white\/80 {
-    background-color: rgba(55, 65, 81, 0.8); /* Corresponds to --toolbar-bg */
+    background-color: rgba(55, 65, 81, 0.8); 
 }
 
 .dark .text-stone-700 {

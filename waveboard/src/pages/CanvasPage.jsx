@@ -23,7 +23,7 @@ function CanvasPage() {
   const [error, setError] = useState('');
   const [isConnected, setIsConnected] = useState(false);
   const [connectedUsers, setConnectedUsers] = useState([]);
-  const [cursors, setCursors] = useState({}); // State for remote cursors
+  const [cursors, setCursors] = useState({}); 
   const token = localStorage.getItem('token');
   const [isDarkMode, setIsDarkMode] = useState(false);
 
@@ -202,32 +202,42 @@ useEffect(() => {
           email={data.email}
         />
       ))}
-      
-       <div className="absolute top-4 left-4 z-20 flex flex-col items-start gap-2">
-           <img
+<div className="absolute top-4 left-4 z-20 flex flex-row items-center gap-2 md:flex-col md:items-start lg:flex-row lg:items-center">
+  <img
     src={isDarkMode ? "/logo_dark_nobg.png" : "/logo_light_nobg.png"}
     alt="App Logo"
-    className="h-10 w-auto mb-2 drop-shadow-md transition-opacity duration-300"
+    className="h-10 w-auto drop-shadow-md transition-opacity duration-300"
   />
-         {/* Connection Status */}
-        <div className="flex items-center gap-2 px-3 py-1 bg-white/80 backdrop-blur-sm border border-stone-200 rounded-full text-xs font-semibold text-stone-700 shadow-sm">
-    <div
-      className={`w-2 h-2 rounded-full ${
-        isConnected ? "bg-green-500" : "bg-red-500"
-      }`}
-    ></div>
-    <span>{isConnected ? "Connected" : "Disconnected"}</span>
-  </div>
 
-         {/* User Count */}
-         {isConnected && connectedUsers.length > 0 && (
-           <div className="flex items-center gap-2 px-3 py-1 bg-white/80 backdrop-blur-sm border border-stone-200 rounded-full text-xs font-semibold text-stone-700 shadow-sm">
-             <span>
-               {connectedUsers.length} user{connectedUsers.length > 1 ? "s" : ""} online
-             </span>
-           </div>
-         )}
-       </div>
+  {/* Tags container */}
+  <div className="flex flex-row gap-2 md:flex-col md:gap-2 lg:flex-row lg:gap-2">
+    {/* Connection Status */}
+    <div className="flex items-center gap-2 px-3 py-1 bg-white/80 backdrop-blur-sm 
+                    border border-stone-200 rounded-full text-xs font-semibold 
+                    text-stone-700 shadow-sm">
+      <div
+        className={`w-2 h-2 rounded-full ${
+          isConnected ? "bg-green-500" : "bg-red-500"
+        }`}
+      ></div>
+      <span>{isConnected ? "Connected" : "Disconnected"}</span>
+    </div>
+
+    {/* User Count */}
+    {isConnected && connectedUsers.length > 0 && (
+      <div className="flex items-center gap-2 px-3 py-1 bg-white/80 backdrop-blur-sm 
+                      border border-stone-200 rounded-full text-xs font-semibold 
+                      text-stone-700 shadow-sm">
+        <span>
+          {connectedUsers.length} user{connectedUsers.length > 1 ? "s" : ""} online
+        </span>
+      </div>
+    )}
+  </div>
+</div>
+
+
+
 
        <div className="h-full">
          <BoardProvider

@@ -143,7 +143,7 @@ function Profile() {
 
       <main className="max-w-7xl mx-auto p-6 md:p-8">
         {/* Create Canvas Section */}
-        <div className="bg-white p-8 rounded-xl shadow-lg border border-stone-200 mb-12">
+        <div className="bg-white p-8 rounded-xl  border border-stone-200 mb-12">
           <h2 className="font-serif text-3xl font-bold text-stone-800 mb-2">
             Start a New Creation
           </h2>
@@ -196,7 +196,7 @@ function Profile() {
                   key={canvas._id}
                   className="group block"
                 >
-                  <div className="bg-white rounded-xl shadow-lg border border-stone-200 h-full flex flex-col justify-between hover:shadow-2xl hover:border-stone-300 transition-all duration-300 cursor-pointer">
+                  <div className="bg-white rounded-xl  border border-stone-200 h-full flex flex-col justify-between hover:shadow-2xl hover:border-stone-300 transition-all duration-300 cursor-pointer">
                     <div className="p-6">
                       <h4 className="font-serif text-2xl font-bold text-stone-800 truncate mb-2 group-hover:text-indigo-600 transition-colors">
                         {canvas.name}

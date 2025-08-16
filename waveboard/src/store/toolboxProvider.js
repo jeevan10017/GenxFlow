@@ -1,4 +1,4 @@
-import React, { useReducer,useEffect } from 'react';
+import React, { useReducer, useEffect } from 'react';
 import toolboxContext from './toolbox-context';
 import { COLORS, TOOLBOX_ACTIONS, TOOL_ITEMS } from '../constants';
 
@@ -80,21 +80,19 @@ const initialToolboxState = {
   },
 };
 
-const ToolboxProvider = ({ children,isDarkMode  }) => {
+const ToolboxProvider = ({ children, isDarkMode, isGuest, onAiBrushAttempt }) => {
   const [toolboxState, dispatchToolboxAction] = useReducer(toolboxReducer, initialToolboxState);
 
    useEffect(() => {
     const newColors = {};
     const defaultColor = isDarkMode ? COLORS.WHITE : COLORS.BLACK;
-
-    // We prepare a payload of color updates
+    
     for (const tool in toolboxState) {
-        // If the current stroke is black (light mode default) or white (dark mode default), swap it.
         if (toolboxState[tool].stroke === COLORS.BLACK || toolboxState[tool].stroke === COLORS.WHITE) {
             newColors[tool] = { stroke: defaultColor };
         }
     }
-     // Dispatch one action to update all relevant tool colors
+    
     if (Object.keys(newColors).length > 0) {
         dispatchToolboxAction({
             type: TOOLBOX_ACTIONS.UPDATE_COLORS,
@@ -136,6 +134,8 @@ const ToolboxProvider = ({ children,isDarkMode  }) => {
     changeStroke: changeStrokeHandler,
     changeFill: changeFillHandler,
     changeSize: changeSizeHandler,
+    isGuest,
+    onAiBrushAttempt, 
   };
 
   return (

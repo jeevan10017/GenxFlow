@@ -2,13 +2,15 @@
 .container {
   position: fixed;
   z-index: 900;
-  top: 100px;
-  left: 10px;
-  width: 80px; /* Much narrower width for vertical layout */
-  padding: 8px;
+  top: 30%;
+  transform: translateY(-50%); /* Slightly above middle */
+  right: 10px; /* Position on the right side for small screens */
+  left: auto;
+  width: 40px; /* Very thin width for single column */
+  padding: 8px 4px; /* Reduced horizontal padding */
   display: flex;
   flex-direction: column;
-  gap: 12px; /* Space between sections */
+  gap: 8px; /* Smaller gap for compact layout */
   border-radius: 12px;
   cursor: move;
   transition: background-color 0.3s, border-color 0.3s, box-shadow 0.3s;
@@ -24,29 +26,30 @@
 .selectOptionContainer {
   display: flex;
   flex-direction: column;
+  align-items: center; /* Center all items */
 }
 
 .toolBoxLabel {
-  font-size: 11px;
+  font-size: 9px; /* Smaller font for compact layout */
   font-weight: 500;
-  margin-bottom: 6px;
+  margin-bottom: 4px;
   color: #4b5563; /* Light mode text */
   transition: color 0.3s;
   text-align: center;
 }
 
-/* --- Color Swatches in 2-column vertical grid --- */
+/* --- Color Swatches in single column --- */
 .colorsContainer {
-  display: grid;
-  grid-template-columns: 1fr 1fr; /* Two columns */
-  gap: 4px;
-  justify-items: center;
+  display: flex;
+  flex-direction: column; /* Single column layout */
+  gap: 3px;
+  align-items: center;
 }
 
 .colorBox {
-  width: 20px;
-  height: 20px;
-  border-radius: 5px;
+  width: 18px;
+  height: 18px;
+  border-radius: 4px;
   cursor: pointer;
   border: 1px solid rgba(0, 0, 0, 0.1);
   transition: transform 0.2s ease, box-shadow 0.2s;
@@ -66,11 +69,11 @@
 }
 
 .colorPicker {
-  width: 20px;
-  height: 20px;
+  width: 18px;
+  height: 18px;
   border: none;
   padding: 0;
-  border-radius: 5px;
+  border-radius: 4px;
   cursor: pointer;
   background-color: transparent; /* Allow native color preview */
 }
@@ -81,26 +84,37 @@
   margin: 4px 0;
   -webkit-appearance: none;
   appearance: none;
-  height: 5px;
-  border-radius: 3px;
+  height: 4px;
+  border-radius: 2px;
   outline: none;
   background: #e5e7eb; /* Light mode track */
   transition: background 0.3s;
+  writing-mode: bt-lr; /* IE */
+  -webkit-appearance: slider-vertical; /* WebKit */
+}
+
+/* Vertical slider for small screens */
+.sizeSlider {
+  width: 4px;
+  height: 60px; /* Fixed height for vertical slider */
+  -webkit-appearance: slider-vertical;
+  writing-mode: bt-lr;
+  transform: rotate(180deg); /* Flip to make it intuitive */
 }
 
 .sizeSlider::-webkit-slider-thumb {
   -webkit-appearance: none;
   appearance: none;
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: #3b82f6; /* Light mode thumb */
   cursor: pointer;
 }
 
 .sizeSlider::-moz-range-thumb {
-  width: 14px;
-  height: 14px;
+  width: 12px;
+  height: 12px;
   border-radius: 50%;
   background: #3b82f6;
   cursor: pointer;
@@ -139,21 +153,56 @@
   background: #60a5fa;
 }
 
-/* --- Responsive styles for larger screens --- */
+/* --- Responsive styles for larger screens (desktop) --- */
 @media (min-width: 768px) {
   .container {
+    top: 100px; /* Fixed position from top */
+    transform: none; /* Remove vertical centering */
     left: 20px;
+    right: auto; /* Reset right positioning */
     width: 90px;
     padding: 10px;
+  }
+  
+  .toolBoxLabel {
+    font-size: 11px; /* Restore larger font */
+  }
+  
+  .colorsContainer {
+    display: grid;
+    grid-template-columns: 1fr 1fr; /* Back to 2-column grid */
+    gap: 4px;
+    justify-items: center;
   }
   
   .colorBox {
     width: 22px;
     height: 22px;
+    border-radius: 5px;
   }
   
   .colorPicker {
     width: 22px;
     height: 22px;
+    border-radius: 5px;
+  }
+  
+  /* Horizontal slider for desktop */
+  .sizeSlider {
+    width: 100%;
+    height: 5px;
+    -webkit-appearance: none;
+    writing-mode: initial;
+    transform: none;
+  }
+  
+  .sizeSlider::-webkit-slider-thumb {
+    width: 14px;
+    height: 14px;
+  }
+  
+  .sizeSlider::-moz-range-thumb {
+    width: 14px;
+    height: 14px;
   }
 }

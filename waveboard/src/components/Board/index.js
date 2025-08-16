@@ -148,26 +148,25 @@ function Board({ isDarkMode }) {
   }, [elements, viewport, activeToolItem, cursorPosition, isDarkMode]);
 
   // Draw grid background
-
-const drawGrid = (context, viewport, isDarkMode) => {
-  const gridSize = 20;
-  const { width, height } = context.canvas;
-  const offsetX = viewport.x % gridSize;
-  const offsetY = viewport.y % gridSize;
-  
-  context.fillStyle = isDarkMode ? '#718096' : '#9ca3af';
-  context.globalAlpha = 0.5;
-  
-  for (let x = offsetX; x < width; x += gridSize) {
-    for (let y = offsetY; y < height; y += gridSize) {
-      context.beginPath();
-      context.arc(x, y, 1.0, 0, 2 * Math.PI);
-      context.fill();
+  const drawGrid = (context, viewport, isDarkMode) => {
+    const gridSize = 20;
+    const { width, height } = context.canvas;
+    const offsetX = viewport.x % gridSize;
+    const offsetY = viewport.y % gridSize;
+    
+    context.fillStyle = isDarkMode ? '#718096' : '#9ca3af';
+    context.globalAlpha = 0.5;
+    
+    for (let x = offsetX; x < width; x += gridSize) {
+      for (let y = offsetY; y < height; y += gridSize) {
+        context.beginPath();
+        context.arc(x, y, 1.0, 0, 2 * Math.PI);
+        context.fill();
+      }
     }
-  }
-  
-  context.globalAlpha = 1;
-};
+    
+    context.globalAlpha = 1;
+  };
 
   // Focus textarea when writing
   useEffect(() => {
@@ -205,7 +204,6 @@ const handleMouseUp = () => {
             console.log("Guest canvas, not saving to server.");
             return; 
         }
-
 
         const pathSegments = currentPath.split("/");
         const canvasId = pathSegments.pop();
@@ -258,65 +256,6 @@ const handleMouseUp = () => {
 
   const textAreaPosition = getTextAreaPosition();
 
-  // Dynamic styles for Zoom Controls
-  const viewportControlStyles = {
-    base: {
-      position: 'fixed',
-      top: '10px',
-      right: '10px',
-      zIndex: 1000,
-      display: 'flex',
-      flexDirection: 'column',
-      gap: '5px',
-      padding: '10px',
-      borderRadius: '8px',
-      transition: 'background-color 0.3s, box-shadow 0.3s',
-    },
-    light: {
-      background: 'rgba(255, 255, 255, 0.9)',
-      boxShadow: '0 2px 10px rgba(0,0,0,0.1)',
-    },
-    dark: {
-      background: 'rgba(31, 41, 55, 0.9)',
-      boxShadow: '0 2px 10px rgba(0,0,0,0.3)',
-    },
-  };
-
-  const buttonStyles = {
-    base: {
-      padding: '5px 10px',
-      borderRadius: '4px',
-      cursor: 'pointer',
-      border: '1px solid',
-      transition: 'background-color 0.3s, border-color 0.3s, color 0.3s',
-    },
-    light: {
-      background: 'white',
-      borderColor: '#d1d5db',
-      color: '#374151',
-    },
-    dark: {
-      background: '#4b5563',
-      borderColor: '#6b7280',
-      color: '#f9fafb',
-    },
-  };
-
-  const textStyles = {
-    base: {
-      fontSize: '12px',
-      textAlign: 'center',
-      transition: 'color 0.3s',
-      marginTop: '5px',
-    },
-    light: { color: '#6b7280' },
-    dark: { color: '#d1d5db' },
-  };
-
-  const finalViewportControlStyles = { ...viewportControlStyles.base, ...(isDarkMode ? viewportControlStyles.dark : viewportControlStyles.light) };
-  const finalButtonStyles = { ...buttonStyles.base, ...(isDarkMode ? buttonStyles.dark : buttonStyles.light) };
-  const finalTeextStyles = { ...textStyles.base, ...(isDarkMode ? textStyles.dark : textStyles.light) };
-
   return (
     <div
       ref={containerRef}
@@ -330,23 +269,91 @@ const handleMouseUp = () => {
         overflow: 'hidden',
       }}
     >
-      <div className={classes.viewportControls} style={finalViewportControlStyles}>
+      <div
+        className={classes.viewportControls}
+        style={{
+          position: "fixed",
+          top: "4rem",
+          right: "1rem",
+          zIndex: 1100,
+          color: isDarkMode ? '#ffffff' : '#000000',  
+          background: isDarkMode ? '#1f2937' : '#ffffff',
+          display: 'flex',
+          // Responsive flex direction
+          flexDirection: window.innerWidth <= 1024 ? 'column' : 'row',
+          alignItems: 'center',
+          gap: '4px',
+          padding: '6px',
+          borderRadius: '6px',
+          boxShadow: '0 1px 6px rgba(0, 0, 0, 0.1)',
+          border: `1px solid ${isDarkMode ? '#9CA3AF' : '#9CA3AF'}`,
+          width: window.innerWidth <= 1024 ? 'auto' : '120px',
+        }}
+      >
         <button
+          style={{
+            border: `1px solid ${isDarkMode ? '#9CA3AF' : '#9CA3AF'}`,  
+            color: isDarkMode ? '#ffffff' : '#000000',  
+            background: isDarkMode ? '#1f2937' : '#ffffff',
+            padding: '4px 6px',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '12px',
+            minWidth: 'auto',
+            lineHeight: '1',
+            width: window.innerWidth <= 1024 ? '32px' : 'auto',
+            height: window.innerWidth <= 1024 ? '32px' : 'auto',
+          }}
           onClick={() => zoomViewport(1.2, window.innerWidth / 2, window.innerHeight / 2)}
-          style={finalButtonStyles}
         >
-          Zoom In (+)
+          +
         </button>
         <button
+          style={{
+            border: `1px solid ${isDarkMode ? '#9CA3AF' : '#9CA3AF'}`,  
+            color: isDarkMode ? '#ffffff' : '#000000',  
+            background: isDarkMode ? '#1f2937' : '#ffffff',
+            padding: '4px 6px',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '12px',
+            minWidth: 'auto',
+            lineHeight: '1',
+            width: window.innerWidth <= 1024 ? '32px' : 'auto',
+            height: window.innerWidth <= 1024 ? '32px' : 'auto',
+          }}
           onClick={() => zoomViewport(0.8, window.innerWidth / 2, window.innerHeight / 2)}
-          style={finalButtonStyles}
         >
-          Zoom Out (-)
+          -
         </button>
-        <button onClick={resetViewport} style={finalButtonStyles}>
-          Reset View (0)
+        <button 
+          onClick={resetViewport}   
+          style={{
+            border: `1px solid ${isDarkMode ? '#9CA3AF' : '#9CA3AF'}`,  
+            color: isDarkMode ? '#ffffff' : '#000000',  
+            background: isDarkMode ? '#1f2937' : '#ffffff',
+            padding: '4px 6px',
+            borderRadius: '4px',
+            cursor: 'pointer',
+            fontSize: '12px',
+            minWidth: 'auto',
+            lineHeight: '1',
+            width: window.innerWidth <= 1024 ? '32px' : 'auto',
+            height: window.innerWidth <= 1024 ? '32px' : 'auto',
+          }}
+        >
+          ⟳
         </button>
-        <div style={finalTeextStyles}>
+        <div 
+          className={classes.zoomText}
+          style={{
+            color: isDarkMode ? '#D1D5DB' : '#374151',
+            fontSize: '11px',
+            fontWeight: '600',
+            marginLeft: window.innerWidth <= 1024 ? '0' : '6px',
+            marginTop: window.innerWidth <= 1024 ? '4px' : '0',
+          }}
+        >
           {Math.round(viewport.scale * 100)}%
         </div>
       </div>

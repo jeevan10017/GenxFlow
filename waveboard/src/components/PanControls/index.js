@@ -6,7 +6,7 @@ import cx from 'classnames';
 
 const PanControls = ({ isDarkMode }) => {
   const { panViewport } = useContext(boardContext);
-  const PAN_AMOUNT = 50; // How many pixels to move on each click
+  const PAN_AMOUNT = 50;
 
   return (
     <div className={cx(classes.panContainer, { [classes.dark]: isDarkMode })}>

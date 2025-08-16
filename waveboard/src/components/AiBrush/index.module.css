@@ -9,6 +9,7 @@
   justify-content: center;
   align-items: center;
   z-index: 2000;
+  padding: 16px; 
 }
 
 .modalContent {
@@ -16,7 +17,7 @@
   padding: 24px;
   border-radius: 12px;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.3);
-  width: 90%;
+  width: 100%;
   max-width: 450px;
   text-align: center;
 }
@@ -31,10 +32,12 @@
   display: flex;
   gap: 16px;
   margin-bottom: 24px;
+  flex-wrap: wrap; /* allows wrapping on small screens */
 }
 
 .optionButton {
   flex: 1;
+  min-width: 120px; /* ensures buttons don't shrink too much */
   padding: 16px;
   border: 2px solid #ddd;
   border-radius: 8px;
@@ -53,31 +56,20 @@
 }
 
 .icon {
-  font-size: 2.5rem;
-  margin-bottom: 8px;
+  font-size: 2.2rem;
+  margin-bottom: 6px;
   color: #555;
 }
 
 .label {
-  font-size: 1.1rem;
+  font-size: 1rem;
   font-weight: 600;
   color: #333;
 }
 
 .sublabel {
-  font-size: 0.8rem;
+  font-size: 0.75rem;
   color: #777;
-}
-
-.disabled {
-  cursor: not-allowed;
-  opacity: 0.5;
-}
-
-.disabled:hover {
-  transform: none;
-  border-color: #ddd;
-  background-color: #f9f9f9;
 }
 
 .closeButton {
@@ -89,13 +81,14 @@
   color: #666;
 }
 
+/* Dark Mode */
 .modalContent.dark {
-  background: #1f2937; /* Dark background */
+  background: #1f2937;
   box-shadow: 0 5px 15px rgba(0, 0, 0, 0.5);
 }
 
 .modalContent.dark .title {
-  color: #f3f4f6; /* Lighter text */
+  color: #f3f4f6;
 }
 
 .modalContent.dark .optionButton {
@@ -128,4 +121,38 @@
 .modalContent.dark .closeButton:hover {
   background: #4b5563;
   color: #f3f4f6;
+}
+
+/* 📱 Small screen responsiveness */
+@media (max-width: 600px) {
+  .modalContent {
+    padding: 16px;
+  }
+
+  .title {
+    font-size: 1.25rem;
+    margin-bottom: 16px;
+  }
+
+  .optionsContainer {
+    flex-direction: column;
+    gap: 12px;
+  }
+
+  .optionButton {
+    width: 100%;
+    padding: 12px;
+  }
+
+  .icon {
+    font-size: 2rem;
+  }
+
+  .label {
+    font-size: 0.95rem;
+  }
+
+  .sublabel {
+    font-size: 0.7rem;
+  }
 }
