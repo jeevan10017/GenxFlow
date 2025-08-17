@@ -20,7 +20,9 @@ const server = http.createServer(app);
 const allowedOrigins = [
   process.env.FRONTEND_URL,
   'https://virtual-canvas.vercel.app',
-  'https://virtual-canvas.vercel.app/', // Handle trailing slash
+  'https://virtual-canvas.vercel.app/',
+  'https://genxflow.vercel.app',
+  'https://genxflow.vercel.app/',
   'http://localhost:3000', // For local development
   'http://localhost:3001'
 ].filter(Boolean); // Remove undefined values

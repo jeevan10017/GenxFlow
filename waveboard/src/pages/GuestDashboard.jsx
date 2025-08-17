@@ -68,7 +68,7 @@ const GuestDashboard = () => {
                         onClick={handleSave}
                         className="px-6 py-2 bg-zinc-950 text-white font-semibold rounded-lg shadow-md hover:bg-gray-950 dark:bg-zinc-950 dark:hover:bg-gray-900"
                     >
-                        Save Your Work
+                        Save
                     </button>
                 </div>
             </div>
@@ -100,7 +100,7 @@ const GuestDashboard = () => {
                         <div className="space-y-4">
                             <button
                                 onClick={() => navigate("/register")}
-                                className="w-full py-3 bg-indigo-600 text-white rounded-lg font-semibold"
+                                className="w-full py-3 bg-gray-950 text-white rounded-lg font-semibold"
                             >
                                 Register
                             </button>
