@@ -9,6 +9,7 @@ const User = require('./models/userModal');
 const userRoutes = require('./routes/userRoutes');
 const canvasRoutes = require('./routes/canvasRoutes');
 const agoraRoutes = require('./routes/agoraRoutes');
+const helmet = require("helmet");
 
 // Connect to database
 connectDB();
@@ -16,16 +17,21 @@ connectDB();
 const app = express();
 const server = http.createServer(app); 
 
+app.use(
+  helmet({
+    crossOriginOpenerPolicy: false,
+    crossOriginEmbedderPolicy: false,
+  })
+);
+
 // Improved CORS configuration for production
 const allowedOrigins = [
   process.env.FRONTEND_URL,
-  'https://virtual-canvas.vercel.app',
-  'https://virtual-canvas.vercel.app/',
-  'https://genxflow.vercel.app',
-  'https://genxflow.vercel.app/',
-  'http://localhost:3000', // For local development
-  'http://localhost:3001'
-].filter(Boolean); // Remove undefined values
+   "https://virtual-canvas.vercel.app",
+  "https://genxflow.vercel.app",
+  "http://localhost:3000",
+  "http://localhost:3001"
+].filter(Boolean); 
 
 // Attach Socket.IO to the server with optimized settings for Render
 const io = new Server(server, {
