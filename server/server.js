@@ -28,7 +28,7 @@ app.use(
 const allowedOrigins = [
   process.env.FRONTEND_URL,
    "https://virtual-canvas.vercel.app",
-  "https://genxflow.vercel.app",
+  "https://gnexflow.vercel.app",
   "http://localhost:3000",
   "http://localhost:3001"
 ].filter(Boolean); 
