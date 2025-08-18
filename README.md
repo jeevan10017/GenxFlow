@@ -1,4 +1,4 @@
-#  GenxFlow - The AI-Powered Collaborative Whiteboard 
+#  GnexFlow - The AI-Powered Collaborative Whiteboard 
 
 [![React](https://img.shields.io/badge/React-20232A?style=for-the-badge&logo=react&logoColor=61DAFB)](https://reactjs.org/)
 [![Node.js](https://img.shields.io/badge/Node.js-339933?style=for-the-badge&logo=nodedotjs&logoColor=white)](https://nodejs.org/)
@@ -6,17 +6,17 @@
 [![TensorFlow.js](https://img.shields.io/badge/TensorFlow.js-FF6F00?style=for-the-badge&logo=tensorflow&logoColor=white)](https://www.tensorflow.org/js)
 [![MongoDB](https://img.shields.io/badge/MongoDB-4EA94B?style=for-the-badge&logo=mongodb&logoColor=white)](https://www.mongodb.com/)
 
-**GenxFlow** is a feature-rich, real-time collaborative whiteboard designed for seamless creative and professional collaboration. It goes beyond traditional whiteboards by integrating live video calls and a powerful AI brush that recognizes hand-drawn shapes and text, transforming rough sketches into polished diagrams and notes instantly.
+**GnexFlow** is a feature-rich, real-time collaborative whiteboard designed for seamless creative and professional collaboration. It goes beyond traditional whiteboards by integrating live video calls and a powerful AI brush that recognizes hand-drawn shapes and text, transforming rough sketches into polished diagrams and notes instantly.
 
 <div align="center">
-  <img src="./readmeAssets/dashboard.png" alt="GenxFlow Application Dashboard" width="800px">
+  <img src="./readmeAssets/dashboard.png" alt="GnexFlow Application Dashboard" width="800px">
 </div>
 
 ---
 
 ##  Core Features
 
-GenxFlow is packed with features to make collaboration intuitive, powerful, and fun.
+GnexFlow is packed with features to make collaboration intuitive, powerful, and fun.
 
 * **Real-Time Collaboration:**
     * **Live Multi-User Editing:** See changes from your collaborators appear on your canvas instantly.
@@ -50,15 +50,15 @@ GenxFlow is packed with features to make collaboration intuitive, powerful, and 
     * **Responsive Design:** A clean and intuitive interface that works seamlessly on modern web browsers.
 
 <div style="display: flex; align-items: flex-start; gap: 2%;">
-    <img src="./readmeAssets/tablet-view.png" alt="GenxFlow on a Tablet" width="66%">
-    <img src="./readmeAssets/mobile-view.png" alt="GenxFlow on a Mobile Device" width="32%">
+    <img src="./readmeAssets/tablet-view.png" alt="GnexFlow on a Tablet" width="66%">
+    <img src="./readmeAssets/mobile-view.png" alt="GnexFlow on a Mobile Device" width="32%">
 </div>
 
 ---
 
 ##  Tech Stack
 
-GenxFlow is built with a modern, powerful, and scalable technology stack.
+GnexFlow is built with a modern, powerful, and scalable technology stack.
 
 ### Frontend
 * **Framework:** React.js
@@ -103,7 +103,7 @@ To get a local copy up and running, follow these simple steps.
 
 1.  **Clone the repository:**
     ```sh
-    git clone https://github.com/your-username/GenxFlow.git
+    git clone https://github.com/your-username/GnexFlow.git
     cd waveboard
     ```
 
