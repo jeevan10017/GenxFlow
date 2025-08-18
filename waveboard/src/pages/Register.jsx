@@ -1,17 +1,25 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect } from "react"; 
 import { useApi } from "../context/AppContext";
 import { useNavigate, Link } from "react-router-dom";
 import { GoogleLogin } from "@react-oauth/google";
-import { Brush, User } from "lucide-react";
+import { User } from "lucide-react";
 
 function Register() {
-    // --- All your existing state, useEffects, and handler functions remain the same ---
     const [form, setForm] = useState({ name: "", email: "", password: "" });
     const [loading, setLoading] = useState(false);
     const [error, setError] = useState("");
     const [success, setSuccess] = useState("");
     const { register, googleLogin, isAuthenticated } = useApi();
     const navigate = useNavigate();
+
+    const [showForm, setShowForm] = useState(false);
+    useEffect(() => {
+        const timer = setTimeout(() => {
+            setShowForm(true);
+        }, 3000); 
+
+        return () => clearTimeout(timer);
+    }, []); 
 
     useEffect(() => {
         if (isAuthenticated) {
@@ -37,7 +45,6 @@ function Register() {
             setLoading(false);
         }
     };
-
     const handleGoogleSuccess = async (credentialResponse) => {
         setLoading(true);
         try {
@@ -51,17 +58,22 @@ function Register() {
             setLoading(false);
         }
     };
-    
     const handleGoogleFailure = () => {
         setError("Google authentication failed.");
     };
 
     return (
-        <div className="min-h-screen w-full flex items-center justify-center md:p-4 bg-white">
-            <div className="w-full max-w-4xl flex flex-col lg:flex-row  overflow-y-hidden ">
-                
-                {/* --- Image Section --- */}
-                <div className="w-full lg:w-2/5 min-h-[250px] lg:min-h-0 relative">
+        <div className="min-h-screen w-full flex items-center justify-center bg-white lg:p-4">
+
+            <div className="w-full max-w-4xl h-screen lg:h-auto flex flex-col lg:flex-row overflow-hidden">
+                <div
+                    className={`
+                        w-full lg:w-2/5 relative
+                        transition-all duration-1000 ease-in-out
+                        ${showForm ? 'h-[250px]' : 'h-full'}
+                        lg:h-auto
+                    `}
+                >
                     <img
                         className="h-full w-full object-cover"
                         src="/thin.png"
@@ -69,17 +81,21 @@ function Register() {
                     />
                 </div>
 
-                {/* --- Form Section --- */}
-                <div className="w-full lg:w-3/5 flex flex-col justify-center p-8 sm:p-12">
+                <div
+                    className={`
+                        w-full lg:w-3/5 flex flex-col justify-center p-8 sm:p-12
+                        flex-1 transition-opacity duration-700
+                        ${showForm ? 'opacity-100 delay-500' : 'opacity-0'}
+                        lg:opacity-100
+                    `}
+                >
                     <div>
                         <div className="text-center mb-8">
-                            {/* <Brush className="mx-auto h-10 w-10 text-stone-700 mb-4" /> */}
                             <h1 className="font-serif text-3xl sm:text-4xl font-bold text-stone-800">
                                 Join the Studio
                             </h1>
                             <p className="text-stone-600 mt-2">Begin your creative journey.</p>
                         </div>
-
                         {error && (
                             <div className="mb-4 bg-red-100 border-l-4 border-red-500 text-red-700 p-3 rounded-r-lg text-sm">
                                 <p>{error}</p>
@@ -90,7 +106,6 @@ function Register() {
                                 <p>{success}</p>
                             </div>
                         )}
-                        
                         <div className="mb-4">
                            <GoogleLogin
                                 onSuccess={handleGoogleSuccess}
@@ -100,15 +115,13 @@ function Register() {
                                 size="large"
                             />
                         </div>
-
                         <div className="flex items-center my-6">
                             <hr className="flex-grow border-t border-stone-300" />
                             <span className="mx-4 text-xs font-semibold text-stone-500">OR</span>
                             <hr className="flex-grow border-t border-stone-300" />
                         </div>
-
                         <form className="space-y-4" onSubmit={handleRegister}>
-                             <input
+                            <input
                                 type="text"
                                 value={form.name}
                                 onChange={(e) => setForm({ ...form, name: e.target.value })}
@@ -141,15 +154,14 @@ function Register() {
                             </button>
                         </form>
                     </div>
-
-                     <div className="mt-8 text-center text-sm">
+                    <div className="mt-8 text-center text-sm">
                         <p className="text-stone-600">
                             Already have an account?{" "}
                             <Link to="/login" className="font-bold text-stone-800 hover:underline cursor-pointer">
                                 Sign In
                             </Link>
                         </p>
-                          <p className="text-stone-600 mt-2">
+                        <p className="text-stone-600 mt-2">
                             Or{' '}
                             <Link to="/guest" className="font-bold text-stone-800 hover:underline inline-flex items-center gap-1 cursor-pointer">
                                 <User className="h-4 w-4" /> Continue as Guest
